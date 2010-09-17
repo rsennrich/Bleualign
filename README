@@ -1,0 +1,49 @@
+bleualign README
+
+
+REQUIREMENTS
+------------
+
+The software was developed on Linux using Python 2.6, but should also support newer versions of Python (including 3.X) and other platforms.
+Please report any issues you encounter to sennrich@cl.uzh.ch
+
+
+USAGE INSTRUCTIONS
+------------------
+
+The input and output formats of bleualign are one sentence per line.
+A line which only contains .EOA is considered a hard delimiter (end of article).
+Sentence alignment does not cross these delimiters: reliable delimiters improve speed and performance, wrong ones will seriously degrade performance.
+
+Given the files sourcetext.txt, targettext.txt and sourcetranslation.txt (the latter being sentence-aligned with sourcetext.txt), a sample call is
+
+./bleualign -s sourcetext.txt -t targettext.txt --srctotarget sourcetranslation.txt -o outputfile
+
+It is also possible to provide several translations and/or translations in the other translation direction.
+bleualign will run once per translation provided, the final output being the intersection of the individual runs (i.e. sentence pairs produced in each individual run).
+
+./bleualign -s sourcetext.txt -t targettext.txt --srctotarget sourcetranslation1.txt --srctotarget sourcetranslation2.txt --targettosrc targettranslation1.txt -o outputfile
+
+./bleualign -h will show more usage options
+
+PUBLICATIONS
+------------
+
+The algorithm is described in
+
+Rico Sennrich, Martin Volk (2010):
+   MT-based Sentence Alignment for OCR-generated Parallel Texts. In: Proceedings of AMTA 2010, Denver, Colorado.
+
+
+CONTACT
+-------
+
+For questions and feeback, please contact:
+
+Rico Sennrich
+Institut für Computerlinguistik
+Universität Zuerich
+Binzmühlestrasse 14
+8050 Zürich, Schweiz
+
+sennrich@cl.uzh.ch
