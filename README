@@ -1,5 +1,24 @@
-bleualign README
+Bleualign
+An MT-based sentence alignment tool
 
+Copyright ⓒ 2010
+Rico Sennrich <sennrich@cl.uzh.ch>
+
+A project of the Computational Linguistics Groups at University of Zurich (http://www.cl.uzh.ch).
+
+Project Homepage: http://github.com/rsennrich/bleualign
+
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation
+
+GENERAL INFO
+------------------
+
+Bleualign is a tool to align parallel texts (i.e. a text and its translation) on a sentence level.
+Additionally to the source and target text, Bleualign requires an automatic translation of at least one of the texts.
+The alignment is then performed on the basis of the similarity (modified BLEU score) between the source text sentences (translated into the target language) and the target text sentences.
+See section PUBLICATIONS for more details.
+
+Obtaining an automatic translation is up to the user. The only requirement is that the translation must correspond line-by-line to the source text (no line breaks inserted or removed).
 
 REQUIREMENTS
 ------------
