@@ -82,7 +82,7 @@ def cook_refs(refs, n=4):
             maxcounts[ngram] = max(maxcounts.get(ngram,0), count)
     return ([len(ref) for ref in refs], maxcounts)
 
-def cook_test(test, reflens, refmaxcounts, n=4):
+def cook_test(test, (reflens, refmaxcounts), n=4):
     '''Takes a test sentence and returns an object that
     encapsulates everything that BLEU needs to know about it.'''
     
