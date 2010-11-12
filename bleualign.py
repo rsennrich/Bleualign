@@ -1409,7 +1409,7 @@ class Aligner:
 if multiprocessing_enabled:
   class AlignMultiprocessed(multiprocessing.Process,Aligner):
 
-    def __init__(self,tasks,options,results):
+    def __init__(self,tasks,options,scores):
       multiprocessing.Process.__init__(self)
       self.options = options
       self.tasks = tasks
@@ -1425,7 +1425,7 @@ if multiprocessing_enabled:
         log('reading in article ' + str(i) + ': ',1),
         sourcelist,targetlist,translist1,translist2 = data
         self.multialign = self.process(sourcelist,targetlist,translist1,translist2)
-        self.results[i] = (data,self.multialign,self.bleualign,self.scoredict)
+        self.scores[i] = (data,self.multialign,self.bleualign,self.scoredict)
         
         i,data = self.tasks.get()
 
