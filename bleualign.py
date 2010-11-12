@@ -159,7 +159,6 @@ def load_arguments():
         else:
             assert False, "unhandled option"
 
-    
     if not options['output']:
       log('WARNING: Output not specified. Just printing debugging output.',0)
     if not options['srcfile']:
@@ -171,6 +170,7 @@ def load_arguments():
       usage()
       sys.exit(2)
     return options
+
 
 def log(msg,level=1):
   global loglevel
@@ -256,9 +256,18 @@ def collect_article(src,srcids,srctotarget,target,targetids,targettosrc,options)
     yield sourcelist,targetlist,translist1,translist2
 
 
+#takes a queue as argument and puts all articles to be aligned in it.
+#best call this in a separate process because we limit the queue size for memory reasons
+def tasks_producer(tasks,num_tasks,data):
+    for i,task in enumerate(collect_article(*data)):
+        tasks.put((i,task),True)
+        num_tasks.value += 1
+        
+    #poison pills
+    for i in range(number_of_threads):
+        tasks.put((None,None))
+    num_tasks.value -= 1
 
-
- 
 class Aligner:
 
     def __init__(self,options):
@@ -267,23 +276,28 @@ class Aligner:
       self.srctargetswitch,self.finalbleu,self.before = 0,[],0
       self.srctotarget, self.targettosrc, self.sources_out,self.targets_out = [],[],[],[]
       self.options = options
+      
       if options['srcfile']:
         self.src = open(options['srcfile'],'r')
       if options['targetfile']:
         self.target = open(options['targetfile'],'r')
+        
       if options['output']:
         self.out1 = open(options['output'] + '-s','w')
         self.out2 = open(options['output'] + '-t','w')
       if options['output'] and options['filter']:
         self.out_bad1 = open(options['output'] + '-bad-s','w')
         self.out_bad2 = open(options['output'] + '-bad-t','w')
+
       #program will be run in 'wrong direction' if we only have targettosrc specified. make sure output is still written to the correct file
       if options['targettosrc'] and not options['srctotarget']:
         self.srctargetswitch = 1
+        
       if options['sourceids']:
         self.srcidfile = open(options['sourceids'],'r')
       if options['targetids']:
         self.targetidfile = open(options['targetids'],'r')
+        
       if options['srctotarget']:
         for f in options['srctotarget']:
           self.srctotarget.append(open(f,'r'))
@@ -299,84 +313,67 @@ class Aligner:
       global multiprocessing_enabled
       
       if multiprocessing_enabled:
-        scorers = []
-        outqueues = []
-        tasks = multiprocessing.Queue()
+        tasks = multiprocessing.Queue(number_of_threads)
 
+        manager = multiprocessing.Manager()
+        scores = manager.dict()
+        num_tasks = manager.Value('i',1)
+        scorers = [AlignMultiprocessed(tasks,self.options,scores)  for i in range(number_of_threads)]
 
-        scores = [multiprocessing.Queue() for i in range(number_of_threads)]
-        scorers = [AlignMultiprocessed(tasks,self.options,scores[i])  for i in range(number_of_threads)]
 
         for p in scorers:
           p.start()
 
-        for i,task in enumerate(collect_article(self.src,self.srcidfile,self.srctotarget,self.target,self.targetidfile,self.targettosrc,self.options)):
-          tasks.put((i,task))
-        length = i
-
-        for i in range(number_of_threads):
-            tasks.put((None,None))
+        #this function produces the alignment tasks for the consumers in scorers
+        producer = multiprocessing.Process(target=tasks_producer,args=(tasks,num_tasks,(self.src,self.srcidfile,self.srctotarget,self.target,self.targetidfile,self.targettosrc,self.options)))
+        producer.start()
 
         i = 0
-        waitdict = {}
-        scores2 = scores
-        while i <= length:
-            for queue in scores:
-                    try:
-                      index,data,multialign,bleualign,scoredict = queue.get(True,0.2)
-                    except:
-                      continue
-                    if index is None:
-                          scores2.remove(queue)
-                          break
-                    if i == index:
-                          (sourcelist,targetlist,translist1,translist2) = data
-                          self.scoredict = scoredict
-                          self.multialign = multialign
-                          self.bleualign = bleualign
-                          self.sourcelist = sourcelist
-                          self.targetlist = targetlist
-                          if translist1:
-                            self.translist = translist1[0]
-                          elif translist2:
-                            self.translist = translist2[0]
-                            self.sourcelist,self.targetlist = self.targetlist,self.sourcelist
-                          else:
-                            self.translist=self.sourcelist
-                          self.transids = list(map(itemgetter(0),self.translist))
-                          self.targetids = list(map(itemgetter(0),self.targetlist))
-                          self.sourceids = list(map(itemgetter(0),self.sourcelist))
-                          self.printout()
-                          if self.options['eval']:
-                            print('evaluation ' + str(i))
-                            results[i] = self.evaluate(i)
-                          i+=1
-                    else:
-                          waitdict[index]=(data,multialign,bleualign,scoredict)
-            scores = scores2
-            while i in waitdict:
-                  (data,multialign,bleualign,scoredict) = waitdict.pop(i)
-                  (sourcelist,targetlist,translist1,translist2) = data
-                  self.scoredict = scoredict
-                  self.multialign = multialign
-                  self.bleualign = bleualign
-                  self.sourcelist = sourcelist
-                  self.targetlist = targetlist
-                  if translist1:
-                    self.translist = translist1[0]
-                  elif translist2:
-                    self.translist = translist2[0]
-                    self.sourcelist,self.targetlist = self.targetlist,self.sourcelist
-                  else:
-                    self.translist=self.sourcelist
-                  self.transids = list(map(itemgetter(0),self.translist))
-                  self.targetids = list(map(itemgetter(0),self.targetlist))
-                  self.sourceids = list(map(itemgetter(0),self.sourcelist))
-                  self.printout()
-                  if self.options['eval']:
-                    print('evaluation ' + str(i))
-                    results[i] = self.evaluate(i)
-                  i+=1
+        #get results from processed and call printout function
+        while num_tasks.value:
+            
+            #wait till result #i is populated
+            while True:
+                try:
+                    data,multialign,bleualign,scoredict = scores[i]
+                    break
+                except:
+                    time.sleep(0.1)
+                    continue
+
+            (sourcelist,targetlist,translist1,translist2) = data
+            self.scoredict = scoredict
+            self.multialign = multialign
+            self.bleualign = bleualign
+            self.sourcelist = sourcelist
+            self.targetlist = targetlist
+            
+            #normal case: translation from source to target exists
+            if translist1:
+                self.translist = translist1[0]
+            
+            #only translation from target to source provided. we swap them internally
+            elif translist2:
+                self.translist = translist2[0]
+                self.sourcelist,self.targetlist = self.targetlist,self.sourcelist
+                
+            #no translation provided. we copy source sentences for further processing
+            else:
+                self.translist=self.sourcelist
+
+            self.transids = [pair[0] for pair in self.translist]
+            self.targetids = [pair[0] for pair in self.targetlist]
+            self.sourceids = [pair[0] for pair in self.sourcelist]
+            self.printout()
+
+            if self.options['eval']:
+                print('evaluation ' + str(i))
+                results[i] = self.evaluate(i)
+            
+            del(scores[i])
+            num_tasks.value -= 1 # if this reaches 0, we're finished
+            i += 1
+            
       
       else:
         for i,(sourcelist,targetlist,translist1,translist2) in enumerate(collect_article(self.src,self.srcidfile,self.srctotarget,self.target,self.targetidfile,self.targettosrc,self.options)):
@@ -531,7 +528,6 @@ class Aligner:
       return scoredict
 
 
-
     # given list of test sentences and list of reference sentences, calculate bleu scores
     #if you want to replace bleu with your own similarity measure, use eval_sents_dummy
     def eval_sents(self,translist,targetlist):
@@ -600,6 +596,7 @@ class Aligner:
         
       return scoredict
 
+
     #part of topological sorting algorithm
     def visit(self,src_n,target_n):
         if (src_n,target_n) in self.visited:
@@ -611,7 +608,6 @@ class Aligner:
                 if src_m > src_n and target_m > target_n:
                   self.visit(src_m,target_m)
             self.ordered.append((src_n,target_n))
-
 
 
     #topological sorting algorithm
@@ -708,7 +704,6 @@ class Aligner:
           self.addtoAlignments(lastpair)
           lastpair = ((src,),(target,))
         
-
       #search for gap after last alignment pair
       if src:
         pregapsrc = self.transids.index(src)
@@ -724,6 +719,7 @@ class Aligner:
         lastpair = self.gapfiller(sourcegap,targetgap,lastpair,((),()))
       
       self.addtoAlignments(lastpair)
+
 
     def gapfiller(self,sourcegap,targetgap,pregap,postgap):
 
@@ -765,7 +761,6 @@ class Aligner:
         #concatenate all sentences in postgap alignment pair
         tmpstr =  ''.join([self.targetlist[self.targetids.index(i)][1] for i in postgap[1]])
         evaltarget.append((postgap[1],tmpstr))
-
 
         nSrc = {}
         for n in range(2,Nto1+1):
@@ -860,7 +855,6 @@ class Aligner:
         
         #concatenation didn't help, and we still have possible one-to-one alignments
         if sourcegap and targetgap:
-
 
           #align first two sentences if BLEU validates this
           if "bleu1to1" in gapfillheuristics:
@@ -998,7 +992,6 @@ class Aligner:
       return out
           
 
-
     def addtoAlignments(self,pair,aligntype=None):
       if not (pair[0] and pair[1]):
         return
@@ -1010,8 +1003,6 @@ class Aligner:
           self.multialign.append((pair,"BLEU"))
         else:
           self.multialign.append((pair,"GAPFILLER"))
-
-
 
           
     #print out some debugging info, and print output to file
@@ -1130,7 +1121,8 @@ class Aligner:
           self.out1.write(line + '\n')
         for line in targets:
           self.out2.write(line + '\n')
-        
+       
+       
     #get BLEU score for article pair
     def score_article(self,test,ref):
       global bleu_ngrams
@@ -1142,6 +1134,7 @@ class Aligner:
         
       score = bleu.score_cooked(testcook,bleu_ngrams)
       return score
+
 
     #filter bad sentence pairs / article pairs
     def filtering(self):
@@ -1316,7 +1309,6 @@ class Aligner:
         print('nothing to find')
         return
       
-      
       else:
         gapdists = [(len(srclist),len(targetlist)) for srclist,targetlist in goldalign]
       
@@ -1417,11 +1409,11 @@ class Aligner:
 if multiprocessing_enabled:
   class AlignMultiprocessed(multiprocessing.Process,Aligner):
 
-    def __init__(self,tasks,options,resultsqueue):
+    def __init__(self,tasks,options,results):
       multiprocessing.Process.__init__(self)
       self.options = options
       self.tasks = tasks
-      self.resultsqueue = resultsqueue 
+      self.scores = scores 
       self.bleualign = None
       self.scoredict = None
 
@@ -1433,10 +1425,9 @@ if multiprocessing_enabled:
         log('reading in article ' + str(i) + ': ',1),
         sourcelist,targetlist,translist1,translist2 = data
         self.multialign = self.process(sourcelist,targetlist,translist1,translist2)
-        self.resultsqueue.put((i,data,self.multialign,self.bleualign,self.scoredict))
-        i,data = self.tasks.get()
+        self.results[i] = (data,self.multialign,self.bleualign,self.scoredict)
         
-      self.resultsqueue.put((None,None,None,None,None))
+        i,data = self.tasks.get()
 
 
 if __name__ == '__main__':
