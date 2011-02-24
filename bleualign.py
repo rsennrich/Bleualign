@@ -260,13 +260,13 @@ def collect_article(src,srcids,srctotarget,target,targetids,targettosrc,options)
 #best call this in a separate process because we limit the queue size for memory reasons
 def tasks_producer(tasks,num_tasks,data):
     for i,task in enumerate(collect_article(*data)):
-        tasks.put((i,task),True)
         num_tasks.value += 1
+        tasks.put((i,task),True)
         
     #poison pills
     for i in range(number_of_threads):
         tasks.put((None,None))
-    num_tasks.value -= 1
+    num_tasks.value -= 1 # only if this point is reached, process finishes when all tasks are done.
 
 class Aligner:
 
@@ -330,7 +330,7 @@ class Aligner:
 
         i = 0
         #get results from processed and call printout function
-        while num_tasks.value:
+        while i < num_tasks.value:
             
             #wait till result #i is populated
             while True:
@@ -371,7 +371,6 @@ class Aligner:
                 results[i] = self.evaluate(i)
             
             del(scores[i])
-            num_tasks.value -= 1 # if this reaches 0, we're finished
             i += 1
             
       
