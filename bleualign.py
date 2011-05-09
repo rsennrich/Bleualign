@@ -306,6 +306,7 @@ class Aligner:
           self.targettosrc.append(open(f,'r'))
 
 
+    #takes care of multiprocessing; calls process() function for each article
     def mainloop(self):
       
       results = {}
@@ -482,7 +483,7 @@ class Aligner:
       return multialign
 
 
-    #Compute alignment for current article
+    #Compute alignment for one article and one automatic translation.
     def align(self):
       
       if self.options["galechurch"]:
@@ -623,8 +624,7 @@ class Aligner:
 
 
     #find longest path of good BLEU alignments for which following conditions are true:
-    #what do we want to find? longest path or highes total BLEU score?
-    #alignment is considered among n best by BLEU, numbering of both source and target sentence increases (we do not allow crossing alignments)
+    #BLEU score is maximal, and path is monotonically ordered.
     def pathfinder(self):
         #populate list with all alignment candidates
         self.alignList = []
@@ -643,11 +643,16 @@ class Aligner:
         self.tsort()
 
         #longest-path search in acyclic directed graph through dynamic programming
-        length_to = len(self.ordered)*[0]
         pred = len(self.ordered)*[(0,0)] # store predecessor for each node in longest path
         self.ordered.reverse()
-        for i,(src_v,target_v) in enumerate(self.ordered):
-          
+        
+        #initialize length of path to each node (from virtual start node)
+        length_to = len(self.ordered)*[0]
+        for i,(src,target) in enumerate(self.ordered):
+            length_to[i] = scores[src,target]
+        
+        for i,(src_v,target_v) in enumerate(self.ordered):  
+        
           #instead of iterating through list of edges, we calculate them on the go
           for j,(src_w,target_w) in enumerate(self.ordered):
               if target_w > target_v and src_w > src_v:
@@ -669,6 +674,8 @@ class Aligner:
           next_translation,next_tar=pred[self.ordered.index((next_translation,next_tar))]
 
       
+    #find unaligned sentences and create work packets for gapfiller()
+    #gapfiller() takes two sentence pairs and all unaligned sentences in between as arguments; gapfinder() extracts these.
     def gapfinder(self):
       
       self.multialign = []
@@ -720,6 +727,8 @@ class Aligner:
       self.addtoAlignments(lastpair)
 
 
+    #apply heuristics to align all sentences that remain unaligned after finding best path of 1-to-1 alignments
+    #heuristics include bleu-based 1-to-n alignment and length-based alignment
     def gapfiller(self,sourcegap,targetgap,pregap,postgap):
 
       global gapfillheuristics
