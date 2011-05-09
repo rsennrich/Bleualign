@@ -314,7 +314,7 @@ class Aligner:
       global multiprocessing_enabled
       
       if multiprocessing_enabled:
-        tasks = multiprocessing.Queue(number_of_threads)
+        tasks = multiprocessing.Queue(number_of_threads+1)
 
         manager = multiprocessing.Manager()
         scores = manager.dict()
