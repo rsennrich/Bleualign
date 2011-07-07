@@ -42,6 +42,11 @@ gapfillheuristics = ["bleu1to1","galechurch"]
 #defines amount of debugging output. can be overriden by --verbosity argument on command line
 loglevel = 1
 
+#defines string that identifies hard boundaries (articles, chapters etc.)
+#string needs to be on a line of its own (see examples in eval directory)
+#must be reliable (article i in the source text needs to correspond to article i in the target text)
+end_of_article_marker = ".EOA"
+
 
 def usage():
     bold = "\033[1m"
@@ -197,7 +202,7 @@ def collect_article(src,srcids,srctotarget,target,targetids,targettosrc,options)
         for i,f in enumerate(srctotarget):
           trans[i] = f.readline()
         
-      if line==".EOA\n":
+      if line.rstrip() == end_of_article_marker:
         SRC = 0
         
       #EOF  
@@ -231,7 +236,7 @@ def collect_article(src,srcids,srctotarget,target,targetids,targettosrc,options)
         for i,f in enumerate(targettosrc):
           trans[i] = f.readline()
         
-      if line==".EOA\n":
+      if line.rstrip() == end_of_article_marker:
         TAR = 0
 
       #EOF  

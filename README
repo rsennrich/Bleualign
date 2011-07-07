@@ -36,14 +36,14 @@ Sentence alignment does not cross these delimiters: reliable delimiters improve 
 
 Given the files sourcetext.txt, targettext.txt and sourcetranslation.txt (the latter being sentence-aligned with sourcetext.txt), a sample call is
 
-./bleualign -s sourcetext.txt -t targettext.txt --srctotarget sourcetranslation.txt -o outputfile
+./bleualign.py -s sourcetext.txt -t targettext.txt --srctotarget sourcetranslation.txt -o outputfile
 
 It is also possible to provide several translations and/or translations in the other translation direction.
 bleualign will run once per translation provided, the final output being the intersection of the individual runs (i.e. sentence pairs produced in each individual run).
 
-./bleualign -s sourcetext.txt -t targettext.txt --srctotarget sourcetranslation1.txt --srctotarget sourcetranslation2.txt --targettosrc targettranslation1.txt -o outputfile
+./bleualign.py -s sourcetext.txt -t targettext.txt --srctotarget sourcetranslation1.txt --srctotarget sourcetranslation2.txt --targettosrc targettranslation1.txt -o outputfile
 
-./bleualign -h will show more usage options
+./bleualign.py -h will show more usage options
 
 PUBLICATIONS
 ------------
