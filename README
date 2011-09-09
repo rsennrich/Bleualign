@@ -4,7 +4,7 @@ An MT-based sentence alignment tool
 Copyright ⓒ 2010
 Rico Sennrich <sennrich@cl.uzh.ch>
 
-A project of the Computational Linguistics Groups at University of Zurich (http://www.cl.uzh.ch).
+A project of the Computational Linguistics Group at the University of Zurich (http://www.cl.uzh.ch).
 
 Project Homepage: http://github.com/rsennrich/bleualign
 
@@ -52,6 +52,9 @@ The algorithm is described in
 
 Rico Sennrich, Martin Volk (2010):
    MT-based Sentence Alignment for OCR-generated Parallel Texts. In: Proceedings of AMTA 2010, Denver, Colorado.
+
+Rico Sennrich; Martin Volk (2011): 
+    Iterative, MT-based sentence alignment of parallel texts. In: NODALIDA 2011, Nordic Conference of Computational Linguistics, Riga.
 
 
 CONTACT
