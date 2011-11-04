@@ -82,13 +82,15 @@ def usage():
     print('\t\tFilters out sentences/articles for which BLEU score between source and target is higher than that between translation and target (usually means source and target are in same language). Only works if --filter is set.')
     print('\t' + bold +'--galechurch' + reset)
     print('\t\tAlign the bitext using Gale and Church\'s algorithm (without BLEU comparison).')
+    print('\t' + bold +'--printempty' + reset)
+    print('\t\tAlso write unaligned sentences to file. By default, they are discarded.')
     print('\t' + bold +'--verbosity' + reset + ', ' + bold +'-v' + reset + ' int')
     print('\t\tVerbosity. Choose amount of debugging output. Default value 1; choose 0 for (mostly) quiet mode, 2 for verbose output')
 
 
 def load_arguments():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "def:ho:s:t:v:", ["factored", "filter=", "filterthreshold=", "filterlang", "deveval","eval", "help", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "sourceids=", "targetids=","verbosity="])
+        opts, args = getopt.getopt(sys.argv[1:], "def:ho:s:t:v:", ["factored", "filter=", "filterthreshold=", "filterlang", "printempty", "deveval","eval", "help", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "sourceids=", "targetids=","verbosity="])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(str(err)) # will print something like "option -a not recognized"
@@ -109,6 +111,7 @@ def load_arguments():
     options['eval'] = None
     options['galechurch'] = None
     options['verbosity'] = 1
+    options['printempty'] = False
 
     bold = "\033[1m"
     reset = "\033[0;0m"
@@ -158,6 +161,8 @@ def load_arguments():
             options['sourceids'] = a
         elif o == "--targetids":
             options['targetids'] = a
+        elif o == "--printempty":
+            options['printempty'] = True
         elif o in ("-v", "--verbosity"):
             global loglevel
             loglevel = int(a)
@@ -1053,12 +1058,28 @@ class Aligner:
       targets_factored = []
       self.multialign = sorted(self.multialign,key=itemgetter(0))
       sentscores = {}
+      lastsrc,lasttarget = 0,0
       for j,(src,target) in enumerate([i[0] for i in self.multialign]):
         if self.srctargetswitch:
           src,target = target,src
+        
+        if self.options['printempty']:
+            if src[0] != lastsrc + 1:
+                sources.extend([self.sourcelist[self.sourceids.index(ID)][1] for ID in range(lastsrc+1,src[0])])
+                targets.extend(['' for ID in range(lastsrc+1,src[0])])
+                translations.extend(['' for ID in range(lastsrc+1,src[0])])
+                
+            if target[0] != lasttarget + 1:
+                sources.extend(['' for ID in range(lasttarget+1,target[0])])
+                targets.extend([self.targetlist[self.targetids.index(ID)][1] for ID in range(lasttarget+1,target[0])])
+                translations.extend(['' for ID in range(lasttarget+1,target[0])])
+        
         sources.append(' '.join([self.sourcelist[self.sourceids.index(ID)][1] for ID in src]))
         targets.append(' '.join([self.targetlist[self.targetids.index(ID)][1] for ID in target]))
         translations.append(' '.join([self.translist[self.transids.index(ID)][1] for ID in src]))
+        
+        lastsrc = src[-1]
+        lasttarget = target[-1]
 
         if self.options['factored']:
           sources_factored.append(' '.join([self.sourcelist[self.sourceids.index(ID)][2] for ID in src]))
