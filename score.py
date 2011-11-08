@@ -42,6 +42,9 @@ normalize2 = [
 ]
 normalize2 = [(re.compile(pattern), replace) for (pattern, replace) in normalize2]
 
+#combine normalize2 into a single regex.
+normalize3 = re.compile(r'([\{-\~\[-\` -\&\(-\+\:-\@\/])|(?:(?<![0-9])([\.,]))|(?:([\.,])(?![0-9]))|(?:(?<=[0-9])(-))')
+
 def normalize(s):
     '''Normalize and tokenize text. This is lifted from NIST mteval-v11a.pl.'''
     # Added to bypass NIST-style pre-processing of hyp and ref files -- wade
@@ -57,9 +60,7 @@ def normalize(s):
     s = " %s " % s
     if not preserve_case:
         s = s.lower()         # this might not be identical to the original
-    for (pattern, replace) in normalize2:
-        s = re.sub(pattern, replace, s)
-    return s.split()
+    return [tok for tok in normalize3.split(s) if tok and tok != ' ']
 
 def count_ngrams(words, n=4):
     counts = {}
