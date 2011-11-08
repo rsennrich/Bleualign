@@ -42,9 +42,6 @@ normalize2 = [
 ]
 normalize2 = [(re.compile(pattern), replace) for (pattern, replace) in normalize2]
 
-#combine normalize2 into a single regex.
-normalize3 = re.compile(r'([\{-\~\[-\` -\&\(-\+\:-\@\/])|(?:(?<![0-9])([\.,]))|(?:([\.,])(?![0-9]))|(?:(?<=[0-9])(-))')
-
 def normalize(s):
     '''Normalize and tokenize text. This is lifted from NIST mteval-v11a.pl.'''
     # Added to bypass NIST-style pre-processing of hyp and ref files -- wade
@@ -60,7 +57,9 @@ def normalize(s):
     s = " %s " % s
     if not preserve_case:
         s = s.lower()         # this might not be identical to the original
-    return [tok for tok in normalize3.split(s) if tok and tok != ' ']
+    for (pattern, replace) in normalize2:
+        s = re.sub(pattern, replace, s)
+    return s.split()
 
 def count_ngrams(words, n=4):
     counts = {}
@@ -83,10 +82,11 @@ def cook_refs(refs, n=4):
             maxcounts[ngram] = max(maxcounts.get(ngram,0), count)
     return ([len(ref) for ref in refs], maxcounts)
 
-def cook_test(test, (reflens, refmaxcounts), n=4):
+def cook_test(test, args, n=4):
     '''Takes a test sentence and returns an object that
     encapsulates everything that BLEU needs to know about it.'''
     
+    args = (reflens, refmaxcounts)
     test = normalize(test)
     result = {}
     result["testlen"] = len(test)

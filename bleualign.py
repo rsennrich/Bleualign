@@ -16,11 +16,11 @@ import score as bleu
 sys.path.append(os.path.join(sys.path[0],'eval'))
 
 
-try:
+if sys.version_info >= (2,6):
   import multiprocessing
   multiprocessing_enabled = 1
   number_of_threads = 4
-except:
+else:
   multiprocessing_enabled = 0
 
 #only consider target sentences for bleu-based alignment that are among top N alternatives for a given source sentence
