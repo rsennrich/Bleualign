@@ -549,6 +549,7 @@ class Aligner:
       cooked_test = {}
       cooked_test2 = {}
       cooktarget =  [(items[0],bleu.cook_refs([items[1]],bleu_ngrams)) for items in targetlist]
+      cooktarget = [(refID,(reflens, refmaxcounts, set(refmaxcounts))) for (refID,(reflens, refmaxcounts)) in cooktarget]
 
 
       for testID,testSent in translist:
@@ -561,50 +562,46 @@ class Aligner:
         cooked_test["guess"] = [max(len(test_normalized)-k+1,0) for k in range(1,bleu_ngrams+1)]
         counts = bleu.count_ngrams(test_normalized, bleu_ngrams)
         
-        #sort by n-gram length. if we have no matching bigrams, we don't have to compare unigrams
-        counts_sorted = sorted(counts.items(),key=lambda item: len(item[0]),reverse=True)
-        
-        #get all ngrams of highest order - useful to quickly filter out references that will have bleu score 0 
-        counts_longest = [(ngram,count) for (ngram, count) in counts_sorted if len(ngram)==bleu_ngrams]
+        #separate by n-gram length. if we have no matching bigrams, we don't have to compare unigrams
+        ngrams_sorted = dict([(x,set()) for x in range(bleu_ngrams)])
+        for ngram in counts:
+            ngrams_sorted[len(ngram)-1].add(ngram)
+            
 
-        for (refID,(reflens, refmaxcounts)) in cooktarget:
-                      
-          #no n-gram match in highest order: pair will have bleu score of 0
-          if not any([ngram in refmaxcounts for (ngram,counts) in counts_longest]):
-            continue
+        for (refID,(reflens, refmaxcounts, refset)) in cooktarget:
+            
+          ngrams_filtered = ngrams_sorted[bleu_ngrams-1].intersection(refset)
         
-          #filter out n-grams that don't appear in reference
-          counts_filtered = [(ngram,count) for (ngram, count) in counts_sorted if ngram in refmaxcounts]
-        
-          #copied over from bleu.py to minimize redundancy
-          cooked_test["reflen"] = reflens[0]
-          cooked_test['correct'] = [0]*bleu_ngrams
-          
-          for (ngram,count) in counts_filtered:
-              order = len(ngram)
-              cooked_test["correct"][order-1] += min(refmaxcounts[ngram], count)
+          if ngrams_filtered:
+            cooked_test["reflen"] = reflens[0]
+            cooked_test['correct'] = [0]*bleu_ngrams
+            for ngram in ngrams_filtered:
+              cooked_test["correct"][bleu_ngrams-1] += min(refmaxcounts[ngram], counts[ngram])
+            
+            for order in range(bleu_ngrams-1):
+                for ngram in ngrams_sorted[order].intersection(refset):
+                    cooked_test["correct"][order] += min(refmaxcounts[ngram], counts[ngram])
 
-
-          #copied over from bleu.py to minimize redundancy
-          logbleu = 0.0
-          for k in range(bleu_ngrams):
-              logbleu += math.log(cooked_test['correct'][k])-math.log(cooked_test['guess'][k])
-          logbleu /= bleu_ngrams
-          logbleu += min(0,1-float(cooked_test['reflen'])/cooked_test['testlen'])
-          score = math.exp(logbleu)
-          
-          if score > 0:
-              #calculate bleu score in reverse direction
-              cooked_test2["guess"] = [max(cooked_test['reflen']-k+1,0) for k in range(1,bleu_ngrams+1)]
-              logbleu = 0.0
-              for k in range(bleu_ngrams):
-                  logbleu += math.log(cooked_test['correct'][k])-math.log(cooked_test2['guess'][k])
-              logbleu /= bleu_ngrams
-              logbleu += min(0,1-float(cooked_test['testlen'])/cooked_test['reflen'])
-              score2 = math.exp(logbleu)
-              
-              meanscore = (2*score*score2)/(score+score2)
-              scorelist.append((meanscore,refID,cooked_test['correct']))
+            #copied over from bleu.py to minimize redundancy
+            logbleu = 0.0
+            for k in range(bleu_ngrams):
+                logbleu += math.log(cooked_test['correct'][k])-math.log(cooked_test['guess'][k])
+            logbleu /= bleu_ngrams
+            logbleu += min(0,1-float(cooked_test['reflen'])/cooked_test['testlen'])
+            score = math.exp(logbleu)
+            
+            if score > 0:
+                #calculate bleu score in reverse direction
+                cooked_test2["guess"] = [max(cooked_test['reflen']-k+1,0) for k in range(1,bleu_ngrams+1)]
+                logbleu = 0.0
+                for k in range(bleu_ngrams):
+                    logbleu += math.log(cooked_test['correct'][k])-math.log(cooked_test2['guess'][k])
+                logbleu /= bleu_ngrams
+                logbleu += min(0,1-float(cooked_test['testlen'])/cooked_test['reflen'])
+                score2 = math.exp(logbleu)
+                
+                meanscore = (2*score*score2)/(score+score2)
+                scorelist.append((meanscore,refID,cooked_test['correct']))
               
         scoredict[testID] = sorted(scorelist,key=itemgetter(0),reverse=True)[:maxalternatives]
         
