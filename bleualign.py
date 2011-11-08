@@ -564,22 +564,26 @@ class Aligner:
         #sort by n-gram length. if we have no matching bigrams, we don't have to compare unigrams
         counts_sorted = sorted(counts.items(),key=lambda item: len(item[0]),reverse=True)
         
+        #get all ngrams of highest order - useful to quickly filter out references that will have bleu score 0 
+        counts_longest = [(ngram,count) for (ngram, count) in counts_sorted if len(ngram)==bleu_ngrams]
+
         for (refID,(reflens, refmaxcounts)) in cooktarget:
-          valid = 0
+                      
+          #no n-gram match in highest order: pair will have bleu score of 0
+          if not any([ngram in refmaxcounts for (ngram,counts) in counts_longest]):
+            continue
+        
+          #filter out n-grams that don't appear in reference
+          counts_filtered = [(ngram,count) for (ngram, count) in counts_sorted if ngram in refmaxcounts]
+        
           #copied over from bleu.py to minimize redundancy
           cooked_test["reflen"] = reflens[0]
           cooked_test['correct'] = [0]*bleu_ngrams
-          for (ngram, count) in counts_sorted:
+          
+          for (ngram,count) in counts_filtered:
               order = len(ngram)
-              if not valid:
-                if cooked_test['correct'][-1]: #n-gram match in highest order: pair will have bleu score > 0
-                  valid = 1
-                elif order < bleu_ngrams: #no n-gram match in highest order: pair will have bleu score of 0
-                  break
-              cooked_test["correct"][order-1] += min(refmaxcounts.get(ngram,0), count)
+              cooked_test["correct"][order-1] += min(refmaxcounts[ngram], count)
 
-          if not valid: #no n-gram match in highest order: pair will have bleu score of 0
-              continue
 
           #copied over from bleu.py to minimize redundancy
           logbleu = 0.0
@@ -612,9 +616,10 @@ class Aligner:
         if (src_n,target_n) in self.visited:
             return
         else:
-            self.visited[(src_n,target_n)] = 0
-            #instead of iterating through list of edges, we compute them on the go
-            for src_m,target_m in self.alignList:
+            self.visited.add((src_n,target_n))
+            self.remaining.remove((src_n,target_n))
+            #instead of iterating through all edges, we compute them on the go
+            for src_m,target_m in list(self.remaining):
                 if src_m > src_n and target_m > target_n:
                   self.visit(src_m,target_m)
             self.ordered.append((src_n,target_n))
@@ -624,8 +629,9 @@ class Aligner:
     #input self.alignList
     #output self.ordered
     def tsort(self):
-        self.visited = {}
+        self.visited = set()
         self.ordered = []
+        self.remaining = set(self.alignList)
 
         for src,target in self.alignList:
             self.visit(src,target)  
