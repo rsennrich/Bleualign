@@ -288,9 +288,9 @@ class Aligner:
       self.options = options
       
       if options['srcfile']:
-        self.src = open(options['srcfile'],'r')
+        self.src = open(options['srcfile'],'rU')
       if options['targetfile']:
-        self.target = open(options['targetfile'],'r')
+        self.target = open(options['targetfile'],'rU')
         
       if options['output']:
         self.out1 = open(options['output'] + '-s','w')
@@ -304,16 +304,16 @@ class Aligner:
         self.srctargetswitch = 1
         
       if options['sourceids']:
-        self.srcidfile = open(options['sourceids'],'r')
+        self.srcidfile = open(options['sourceids'],'rU')
       if options['targetids']:
-        self.targetidfile = open(options['targetids'],'r')
+        self.targetidfile = open(options['targetids'],'rU')
         
       if options['srctotarget']:
         for f in options['srctotarget']:
-          self.srctotarget.append(open(f,'r'))
+          self.srctotarget.append(open(f,'rU'))
       if options['targettosrc']:
         for f in options['targettosrc']:
-          self.targettosrc.append(open(f,'r'))
+          self.targettosrc.append(open(f,'rU'))
 
 
     #takes care of multiprocessing; calls process() function for each article
