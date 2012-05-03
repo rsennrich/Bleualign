@@ -9,8 +9,7 @@ import os
 import getopt
 import time
 import math
-from xml.etree import cElementTree as ET
-from operator import itemgetter, attrgetter
+from operator import itemgetter
 import gale_church
 import score as bleu
 sys.path.append(os.path.join(sys.path[0],'eval'))

@@ -87,7 +87,7 @@ def cook_test(test, args, n=4):
     '''Takes a test sentence and returns an object that
     encapsulates everything that BLEU needs to know about it.'''
     
-    args = (reflens, refmaxcounts)
+    reflens, refmaxcounts = args
     test = normalize(test)
     result = {}
     result["testlen"] = len(test)
