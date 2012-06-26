@@ -12,7 +12,7 @@ import math
 from operator import itemgetter
 import gale_church
 import score as bleu
-sys.path.append(os.path.join(sys.path[0],'eval'))
+from utils import evaluate, finalevaluation
 
 
 if sys.version_info >= (2,6):
@@ -34,7 +34,7 @@ bleu_ngrams = 2
 Nto1 = 2
 
 #gapfillheuristics: what to do with sentences that aren't aligned one-to-one by the first BLEU pass, nor have a 1 to N alignment validated by BLEU?
-#possible members are: bleu1to1, naive1to1, galechurch
+#possible members are: bleu1to1, galechurch
 #what they do is commented in the source code
 gapfillheuristics = ["bleu1to1","galechurch"]
 
@@ -65,10 +65,6 @@ def usage():
     print('\t\tTranslation of source language text to target language. Needs to be sentence-aligned with source language text.')
     print('\t' + bold +'--targettosrc' + reset + ' file')
     print('\t\tTranslation of target language text to source language. Needs to be sentence-aligned with target language text.')
-    print('\t' + bold +'--sourceids' + reset + ' file')
-    print('\t\tOptional file that assigns a unique id to every source language sentence (needs to be int). Needs to be sentence-aligned with source language text. (Used for evaluation)')
-    print('\t' + bold +'--targetids' + reset + ' file')
-    print('\t\tOptional file that assigns a unique id to every target language sentence (needs to be int). Needs to be sentence-aligned with target language text. (Used for evaluation)')
     print('\n\t' + bold +'--factored' + reset)
     print('\t\tSource and target text can be factored (as defined by moses: | as separator of factors, space as word separator). Only first factor will be used for BLEU score.')
     print('\n\t' + bold +'--filter' + reset + ', ' + bold +'-f' + reset + ' option')
@@ -89,7 +85,7 @@ def usage():
 
 def load_arguments():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "def:ho:s:t:v:", ["factored", "filter=", "filterthreshold=", "filterlang", "printempty", "deveval","eval", "help", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "sourceids=", "targetids=","verbosity="])
+        opts, args = getopt.getopt(sys.argv[1:], "def:ho:s:t:v:", ["factored", "filter=", "filterthreshold=", "filterlang", "printempty", "deveval","eval", "help", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "verbosity="])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(str(err)) # will print something like "option -a not recognized"
@@ -99,8 +95,6 @@ def load_arguments():
     options['srcfile'] = None
     options['targetfile'] = None
     options['output'] = None
-    options['sourceids'] = None
-    options['targetids'] = None
     options['factored'] = False
     options['filter'] = None
     options['filterthreshold'] = 90
@@ -120,14 +114,10 @@ def load_arguments():
             usage()
             sys.exit()
         elif o in ("-e", "--eval"):
-            options['sourceids'] = os.path.join(sys.path[0],'eval','eval1989.id.de')
-            options['targetids'] = os.path.join(sys.path[0],'eval','eval1989.id.fr')
             options['srcfile'] = os.path.join(sys.path[0],'eval','eval1989.de')
             options['targetfile'] = os.path.join(sys.path[0],'eval','eval1989.fr')
             options['eval'] = 1990
         elif o in ("-d", "--deveval"):
-            options['sourceids'] = os.path.join(sys.path[0],'eval','eval1957.id.de')
-            options['targetids'] = os.path.join(sys.path[0],'eval','eval1957.id.fr')
             options['srcfile'] = os.path.join(sys.path[0],'eval','eval1957.de')
             options['targetfile'] = os.path.join(sys.path[0],'eval','eval1957.fr')
             options['eval'] = 1957
@@ -156,15 +146,12 @@ def load_arguments():
             options['srctotarget'].append(a)
         elif o == "--targettosrc":
             options['targettosrc'].append(a)
-        elif o == "--sourceids":
-            options['sourceids'] = a
-        elif o == "--targetids":
-            options['targetids'] = a
         elif o == "--printempty":
             options['printempty'] = True
         elif o in ("-v", "--verbosity"):
             global loglevel
             loglevel = int(a)
+            options['loglevel'] = int(a)
         else:
             assert False, "unhandled option"
 
@@ -178,91 +165,54 @@ def load_arguments():
       print('\nERROR: Target file not specified.')
       usage()
       sys.exit(2)
+    if options['targettosrc'] and not options['srctotarget']:
+        print('\nWARNING: Only --targettosrc specified, but expecting at least one --srctotarget. Please swap source and target side.')
+        sys.exit(2)
+
     return options
 
 
 def log(msg,level=1):
-  global loglevel
   if level <= loglevel:
     print(msg)
 
 
-def collect_article(src,srcids,srctotarget,target,targetids,targettosrc,options):
-  EOF = 0
-  
-  while not EOF:
-    SRC,TAR = 1,1
-    counter = 0
-    sourcelist,targetlist = [],[]
-    translist1,translist2 = {},{}
-  
-    #read in source language article
-    while SRC:
-      trans = {}
-      line = src.readline()
-      if srcids:
-        idline = srcids.readline()
-      if srctotarget:
-        for i,f in enumerate(srctotarget):
-          trans[i] = f.readline()
-        
-      if line.rstrip() == end_of_article_marker:
-        SRC = 0
-        
-      #EOF  
-      if not line:
-        EOF = 1
-        SRC = 0
-      
-      if SRC and srcids:
-        counter = int(idline[:-1])
-      elif SRC:
-        counter+=1
-      if SRC and srctotarget:
-        for i,f in enumerate(srctotarget):
-          translist1[i] = translist1.get(i,[]) + [(counter,trans[i][:-1])]
-      
-      if SRC and options['factored']:
-        rawline = ' '.join(word.split('|')[0] for word in line[:-1].split())
-        sourcelist.append((counter,rawline,line[:-1]))
-      elif SRC:
-        sourcelist.append((counter,line[:-1]))
+def collect_article(src,srctotarget,target,targettosrc,options):
 
-    counter = 0
+    EOF = False
+    while not EOF:
 
-    #read in target language article
-    while TAR:
-      trans = {}
-      line = target.readline()
-      if targetids:
-        idline = targetids.readline()
-      if targettosrc:
-        for i,f in enumerate(targettosrc):
-          trans[i] = f.readline()
-        
-      if line.rstrip() == end_of_article_marker:
-        TAR = 0
+        all_texts = []
+        all_translations = []
 
-      #EOF  
-      if not line:
-        EOF = 1
-        TAR = 0
+        for text,translations in [(src,srctotarget),(target,targettosrc)]:
+            textlist = []
+            translist = [[] for i in translations]
 
-      if TAR and targetids:
-        counter = int(idline[:-1])
-      elif TAR:
-        counter+=1
-      if TAR and targettosrc:
-        for i,f in enumerate(targettosrc):
-          translist2[i] = translist2.get(i,[]) + [(counter,trans[i][:-1])]
-          
-      if TAR and options['factored']:
-        rawline = ' '.join(word.split('|')[0] for word in line[:-1].split())
-        targetlist.append((counter,rawline,line[:-1]))
-      elif TAR:
-        targetlist.append((counter,line[:-1]))
-        
-    yield sourcelist,targetlist,translist1,translist2
+            for line in text:
+
+                if line.rstrip() == end_of_article_marker:
+                    for f in translations:
+                        f.readline()
+                    break
+
+                for i,f in enumerate(translations):
+                    translist[i].append(f.readline().rstrip())
+
+                if options['factored']:
+                    rawline = ' '.join(word.split('|')[0] for word in line.split())
+                    textlist.append(rawline,line.rstrip())
+                else:
+                    textlist.append(line.rstrip())
+            else:
+                EOF = True
+
+            all_texts.append(textlist)
+            all_translations.append(translist)
+
+        sourcelist, targetlist = all_texts
+        translist1, translist2 = all_translations
+        yield sourcelist,targetlist,translist1,translist2
 
 
 #takes a queue as argument and puts all articles to be aligned in it.
@@ -280,11 +230,12 @@ def tasks_producer(tasks,num_tasks,data):
 class Aligner:
 
     def __init__(self,options):
-      self.src, self.target, self.srcidfile, self.targetidfile  = None,None,None,None
+      self.src, self.target = None,None
       self.out1, self.out2, self.out_bad1, self.out_bad2 = None,None,None,None
-      self.srctargetswitch,self.finalbleu,self.before = 0,[],0
+      self.finalbleu = []
       self.srctotarget, self.targettosrc, self.sources_out,self.targets_out = [],[],[],[]
       self.options = options
+      self.bleualign = []
       
       if options['srcfile']:
         self.src = open(options['srcfile'],'rU')
@@ -298,15 +249,6 @@ class Aligner:
         self.out_bad1 = open(options['output'] + '-bad-s','w')
         self.out_bad2 = open(options['output'] + '-bad-t','w')
 
-      #program will be run in 'wrong direction' if we only have targettosrc specified. make sure output is still written to the correct file
-      if options['targettosrc'] and not options['srctotarget']:
-        self.srctargetswitch = 1
-        
-      if options['sourceids']:
-        self.srcidfile = open(options['sourceids'],'rU')
-      if options['targetids']:
-        self.targetidfile = open(options['targetids'],'rU')
-        
       if options['srctotarget']:
         for f in options['srctotarget']:
           self.srctotarget.append(open(f,'rU'))
@@ -319,9 +261,7 @@ class Aligner:
     def mainloop(self):
       
       results = {}
-      global number_of_threads
-      global multiprocessing_enabled
-      
+
       if multiprocessing_enabled:
         tasks = multiprocessing.Queue(number_of_threads+1)
 
@@ -330,12 +270,11 @@ class Aligner:
         num_tasks = manager.Value('i',1)
         scorers = [AlignMultiprocessed(tasks,self.options,scores)  for i in range(number_of_threads)]
 
-
         for p in scorers:
           p.start()
 
         #this function produces the alignment tasks for the consumers in scorers
-        producer = multiprocessing.Process(target=tasks_producer,args=(tasks,num_tasks,(self.src,self.srcidfile,self.srctotarget,self.target,self.targetidfile,self.targettosrc,self.options)))
+        producer = multiprocessing.Process(target=tasks_producer,args=(tasks,num_tasks,(self.src,self.srctotarget,self.target,self.targettosrc,self.options)))
         producer.start()
 
         i = 0
@@ -355,50 +294,50 @@ class Aligner:
             self.scoredict = scoredict
             self.multialign = multialign
             self.bleualign = bleualign
-            self.sourcelist = sourcelist
-            self.targetlist = targetlist
-            
+
             #normal case: translation from source to target exists
             if translist1:
-                self.translist = translist1[0]
-            
-            #only translation from target to source provided. we swap them internally
-            elif translist2:
-                self.translist = translist2[0]
-                self.sourcelist,self.targetlist = self.targetlist,self.sourcelist
-                
+                translist = translist1[0]
+
             #no translation provided. we copy source sentences for further processing
             else:
-                self.translist=self.sourcelist
+                if self.options['factored']:
+                    translist = [item[0] for item in sourcelist]
+                else:
+                    translist = sourcelist
 
-            self.transids = [pair[0] for pair in self.translist]
-            self.targetids = [pair[0] for pair in self.targetlist]
-            self.sourceids = [pair[0] for pair in self.sourcelist]
-            self.printout()
+            self.printout(sourcelist, translist, targetlist)
 
             if self.options['eval']:
                 print('evaluation ' + str(i))
-                results[i] = self.evaluate(i)
+                results[i] = evaluate(i, self.options,self.multialign)
             
             del(scores[i])
             i += 1
-            
-      
+
       else:
-        for i,(sourcelist,targetlist,translist1,translist2) in enumerate(collect_article(self.src,self.srcidfile,self.srctotarget,self.target,self.targetidfile,self.targettosrc,self.options)):
+        for i,(sourcelist,targetlist,translist1,translist2) in enumerate(collect_article(self.src,self.srctotarget,self.target,self.targettosrc,self.options)):
           log('reading in article ' + str(i) + ': ',1),
+
           self.multialign = self.process(sourcelist,targetlist,translist1,translist2)
-          self.printout()
+          if translist1:
+              translist = translist1[0]
+          else:
+              if self.options['factored']:
+                translist = [item[0] for item in sourcelist]
+              else:
+                translist = sourcelist
+          self.printout(sourcelist, translist, targetlist)
           if self.options['eval']:
             print('evaluation ' + str(i))
-            results[i] = self.evaluate(i)
-      
+            results[i] = evaluate(i, self.options, self.multialign)
+
       if self.options['eval']:
-        self.finalevaluation(results)
-       
+        finalevaluation(results)
+
       if self.options['filter']:
-        self.filtering()
-          
+        self.write_filtered()
+
 
     #Start different alignment runs depending on which and how many translations are sent to program; intersect results.
     def process(self,sourcelist,targetlist,translist1,translist2):
@@ -415,106 +354,82 @@ class Aligner:
 
       log('processing',1)
 
-      if translist2:
-        phase2 = [0] * len(translist2)
-        for j in translist2:
-          log("computing alignment between targettosrc (file " + str(j) + ") and source text",1)
-          self.sourcelist = targetlist
-          self.targetlist = sourcelist
-          self.translist = translist2[j]
-          phase2[j] = self.align()        
-      
-      if translist1:
-        phase1 = [0] * len(translist1)
-        for j in translist1:
-          log("computing alignment between srctotarget (file " + str(j) + ") and target text",1)
-          self.sourcelist = sourcelist
-          self.targetlist = targetlist
-          self.translist = translist1[j]
-          phase1[j] = self.align()
-        
+      if self.options['factored']:
+          raw_sourcelist = [item[0] for item in sourcelist]
+          raw_targetlist = [item[0] for item in targetlist]
+      else:
+          raw_sourcelist = sourcelist
+          raw_targetlist = targetlist
+
+      for i,translist in enumerate(translist1):
+        log("computing alignment between srctotarget (file " + str(i) + ") and target text",1)
+        phase1.append(self.align(translist, raw_targetlist))
+
+      for i,translist in enumerate(translist2):
+        log("computing alignment between targettosrc (file " + str(i) + ") and source text",1)
+        phase2.append(self.align(translist, raw_sourcelist))
+
       if not (translist1 or translist2):
-        log("no translation available: computing alignment between source and target text",1)
-        self.sourcelist = sourcelist
-        self.targetlist = targetlist
-        self.translist = sourcelist
-        phase1 = [self.align()]
-        
+        if not self.options['galechurch']:
+            log("""ERROR: no translation available:
+BLEU scores can be computed between the source and target text, but this is not the intended usage of Bleualign and may result in poor performance!
+If you're *really* sure that this is what you want, find this error message and remove the exit() statement on the next line""",1)
+            exit()
+        else:
+            phase1 = [self.align(raw_sourcelist, raw_targetlist)]
+
       if len(phase1) > 1:
         log("intersecting all srctotarget alignments",1)
-        phase1b = []
-        for (pair,t) in phase1[0]:
-          valid = 1
-          for other in phase1[1:]:
-            if pair in [pair2 for pair2,ty in other]:
-              continue
-            else:
-              valid = 0
-          if valid:
-            phase1b.append((pair,t))
-            
+        phase1 = sorted(set(phase1[0]).intersection(*[set(x) for x in phase1[1:]]))
       elif phase1:
-        phase1b = phase1[0]
-      else: phase1b = []
-            
+        phase1 = phase1[0]
+
       if len(phase2) > 1:
         log("intersecting all targettosrc alignments",1)
-        phase2b = []
-        for (pair,t) in phase2[0]:
-          valid = 1
-          for other in phase2[1:]:
-            if pair in [pair2 for pair2,ty in other]:
-              continue
-            else:
-              valid = 0
-          if valid:
-            phase2b.append((pair,t))
-        
+        phase2b = sorted(set(phase2[0]).intersection(set(x) for x in phase2[1:]))
       elif phase2:
-        phase2b = phase2[0]
-      else: phase2b = []
-        
-      if phase1b and phase2b:
+        phase2 = phase2[0]
+
+      if phase1 and phase2:
         log("intersecting both directions",1)
         phase3 = []
-        phase2mirror = [(j,k) for ((k,j),t) in phase2b]
-        for pair,t in phase1b:
+        phase2mirror = [(j,k) for ((k,j),t) in phase2]
+        for pair,t in phase1:
           if pair in phase2mirror:
-            phase3.append((pair,'INTERSECT: ' + t + ' - ' + phase2b[phase2mirror.index(pair)][1]))
+            phase3.append((pair,'INTERSECT: ' + t + ' - ' + phase2[phase2mirror.index(pair)][1]))
         multialign = phase3
         
-      elif phase1b:
-        multialign = phase1b
+      elif phase1:
+        multialign = phase1
         
-      elif phase2b:
-        multialign = [((j,k),t) for ((k,j),t) in phase2b]
+      elif phase2:
+        multialign = [((j,k),t) for ((k,j),t) in phase2]
 
       return multialign
 
 
     #Compute alignment for one article and one automatic translation.
-    def align(self):
-      
+    def align(self, translist, targetlist):
+
       if self.options["galechurch"]:
-        self.transids = list(map(itemgetter(0),self.translist))
-        self.targetids = list(map(itemgetter(0),self.targetlist))
-        self.sourceids = list(map(itemgetter(0),self.sourcelist))
         self.multialign,self.bleualign,self.scoredict = [],[],{}
-        churchaligns = self.gale_church(self.translist,self.targetlist)
+        translist = [item for item in enumerate(translist)]
+        targetlist =  [item for item in enumerate(targetlist)]
+        churchaligns = self.gale_church(translist,targetlist)
         for src,target in churchaligns:
           self.addtoAlignments((src,target),'GALECHURCH')
         return self.multialign
 
       else:
         log('Evaluating sentences with bleu',1)
-        self.scoredict = self.eval_sents(self.translist,self.targetlist)
+        self.scoredict = self.eval_sents(translist,targetlist)
         log('finished',1)
         log('searching for longest path of good alignments',1)
-        self.pathfinder()
+        self.pathfinder(translist, targetlist)
         log('finished',1)
         log(time.asctime(),2)
         log('filling gaps',1)
-        self.gapfinder()
+        self.gapfinder(translist, targetlist)
         log('finished',1)
         log(time.asctime(),2)
         return self.multialign
@@ -524,10 +439,10 @@ class Aligner:
     def eval_sents_dummy(self,translist,targetlist):
       scoredict = {}
       
-      for testID,testSent in translist:
+      for testID,testSent in enumerate(translist):
         scores = []
         
-        for refID,refSent in targetlist:
+        for refID,refSent in enumerate(targetlist):
           score = 100-abs(len(testSent)-len(refSent)) #replace this with your own similarity score
           if score > 0:
             scores.append((score,refID,score))
@@ -543,11 +458,11 @@ class Aligner:
       scoredict = {}
       cooked_test = {}
       cooked_test2 = {}
-      cooktarget =  [(items[0],bleu.cook_refs([items[1]],bleu_ngrams)) for items in targetlist]
+      cooktarget =  [(items[0],bleu.cook_refs([items[1]],bleu_ngrams)) for items in enumerate(targetlist)]
       cooktarget = [(refID,(reflens, refmaxcounts, set(refmaxcounts))) for (refID,(reflens, refmaxcounts)) in cooktarget]
 
 
-      for testID,testSent in translist:
+      for testID,testSent in enumerate(translist):
         scorelist = []
 
 
@@ -618,7 +533,7 @@ class Aligner:
             elif pointer == '<':
                 j -= 1
             elif pointer == 'match':
-                best_path.append((self.translist[i][0],self.targetlist[j][0]))
+                best_path.append((i,j))
                 i -= 1
                 j -= 1
 
@@ -627,14 +542,14 @@ class Aligner:
 
 
     #dynamic programming search for best path of alignments (maximal score)
-    def pathfinder(self):
+    def pathfinder(self, translist, targetlist):
 
-        matrix = [[(0,'-') for column in self.targetlist] for row in self.translist]
+        matrix = [[(0,'-') for column in targetlist] for row in translist]
 
-        for i, (s_id, s_sent) in enumerate(self.translist):
-            alignments = dict([(target, score) for (score, target, correct) in self.scoredict[s_id]])
+        for i, s_sent in enumerate(translist):
+            alignments = dict([(target, score) for (score, target, correct) in self.scoredict[i]])
 
-            for j, (t_id, t_sent) in enumerate(self.targetlist):
+            for j, t_sent in enumerate(targetlist):
                 best_score, best_pointer = 0,'-'
 
                 if i:
@@ -649,8 +564,8 @@ class Aligner:
                         best_score = score
                         best_pointer = '<'
 
-                if t_id in alignments:
-                    score = alignments[t_id]
+                if j in alignments:
+                    score = alignments[j]
 
                     if i and j:
                         score += matrix[i-1][j-1][0]
@@ -666,63 +581,51 @@ class Aligner:
 
     #find unaligned sentences and create work packets for gapfiller()
     #gapfiller() takes two sentence pairs and all unaligned sentences in between as arguments; gapfinder() extracts these.
-    def gapfinder(self):
+    def gapfinder(self, translist, targetlist):
       
       self.multialign = []
-      
-      self.transids = list(map(itemgetter(0),self.translist))
-      self.targetids = list(map(itemgetter(0),self.targetlist))
-      self.sourceids = list(map(itemgetter(0),self.sourcelist))
-      
       
       #find gaps: lastpair is considered pre-gap, pair is post-gap
       lastpair = ((),())
       src, target = None, None
       for src,target in self.bleualign:
 
-        oldsrc,oldtarget = lastpair
-        
-        #identify gap sizes        
-        if oldsrc:
-          pregapsrc = self.transids.index(oldsrc[-1])
-        else:
-          pregapsrc = -1
-        if oldtarget:
-          pregaptarget = self.targetids.index(oldtarget[-1])
-        else:
-          pregaptarget = -1
-        sourcegap = self.transids[pregapsrc+1:self.transids.index(src)]
-        targetgap = self.targetids[pregaptarget+1:self.targetids.index(target)]
-        
+        oldsrc, oldtarget = lastpair
+        #in first iteration, gap will start at 0
+        if not oldsrc:
+            oldsrc = (-1,)
+        if not oldtarget:
+            oldtarget = (-1,)
+
+        #identify gap sizes
+        sourcegap = range(oldsrc[-1]+1,src)
+        targetgap = range(oldtarget[-1]+1,target)
+
         if targetgap or sourcegap:
-          lastpair = self.gapfiller(sourcegap,targetgap,lastpair,((src,),(target,)))
+          lastpair = self.gapfiller(sourcegap, targetgap, lastpair, ((src,),(target,)), translist, targetlist)
         else:
           self.addtoAlignments(lastpair)
           lastpair = ((src,),(target,))
-        
+
+      #if self.bleualign is empty, gap will start at 0
+      if not src:
+          src = -1
+      if not target:
+          target = -1
+
       #search for gap after last alignment pair
-      if src:
-        pregapsrc = self.transids.index(src)
-      else:
-        pregapsrc = -1
-      if target:
-        pregaptarget = self.targetids.index(target)
-      else:
-        pregaptarget = -1
-      sourcegap = self.transids[pregapsrc+1:]
-      targetgap = self.targetids[pregaptarget+1:]
+      sourcegap = range(src+1, len(translist))
+      targetgap = range(target+1, len(targetlist))
+
       if targetgap or sourcegap:
-        lastpair = self.gapfiller(sourcegap,targetgap,lastpair,((),()))
+        lastpair = self.gapfiller(sourcegap, targetgap, lastpair, ((),()), translist, targetlist)
       
       self.addtoAlignments(lastpair)
 
 
     #apply heuristics to align all sentences that remain unaligned after finding best path of 1-to-1 alignments
     #heuristics include bleu-based 1-to-n alignment and length-based alignment
-    def gapfiller(self,sourcegap,targetgap,pregap,postgap):
-
-      global gapfillheuristics
-      global Nto1
+    def gapfiller(self, sourcegap, targetgap, pregap, postgap, translist, targetlist):
 
       evalsrc = []
       evaltarget = []
@@ -731,11 +634,11 @@ class Aligner:
       if Nto1 > 1 or "bleu1to1" in gapfillheuristics:
 
         #concatenate all sentences in pregap alignment pair
-        tmpstr =  ''.join([self.translist[self.transids.index(i)][1] for i in pregap[0]])
+        tmpstr =  ''.join([translist[i] for i in pregap[0]])
         evalsrc.append((pregap[0],tmpstr))
 
         #concatenate all sentences in pregap alignment pair
-        tmpstr =  ''.join([self.targetlist[self.targetids.index(i)][1] for i in pregap[1]])
+        tmpstr =  ''.join([targetlist[i] for i in pregap[1]])
         evaltarget.append((pregap[1],tmpstr))
         
         #search will be pruned to this window
@@ -745,20 +648,21 @@ class Aligner:
           window = Nto1
         
         for src in [j for i,j in enumerate(sourcegap) if (i < window or len(sourcegap)-i <= window)]:
-          ID,Sent = self.translist[self.transids.index(src)]
-          evalsrc.append(((ID,),Sent))
+          Sent = translist[src]
+          evalsrc.append(((src,),Sent))
         
         for target in [j for i,j in enumerate(targetgap) if (i < window or len(targetgap)-i <= window)]:
-          ID,Sent = self.targetlist[self.targetids.index(target)][:2]
-          evaltarget.append(((ID,),Sent))
+          Sent = targetlist[target]
+          evaltarget.append(((target,),Sent))
         
-        #concatenate all sentences in pregap alignment pair
-        tmpstr =  ''.join([self.translist[self.transids.index(i)][1] for i in postgap[0]])
+        #concatenate all sentences in postgap alignment pair
+        tmpstr =  ''.join([translist[i] for i in postgap[0]])
         evalsrc.append((postgap[0],tmpstr))
         
         #concatenate all sentences in postgap alignment pair
-        tmpstr =  ''.join([self.targetlist[self.targetids.index(i)][1] for i in postgap[1]])
+        tmpstr =  ''.join([targetlist[i] for i in postgap[1]])
         evaltarget.append((postgap[1],tmpstr))
+
 
         nSrc = {}
         for n in range(2,Nto1+1):
@@ -772,9 +676,24 @@ class Aligner:
         for n in range(2,Nto1+1):
           evaltarget += nTar[n]
         
-        scoredict = self.eval_sents(evalsrc,evaltarget)
+        evalsrc_raw = [item[1] for item in evalsrc]
+        evaltarget_raw = [item[1] for item in evaltarget]
+        
+        scoredict_raw = self.eval_sents(evalsrc_raw,evaltarget_raw)
+        
+        scoredict = {}
+        for src,value in scoredict_raw.items():
+            src = evalsrc[src][0]
+            if value:
+                newlist = []
+                for item in value:
+                    score,target,score2 = item
+                    target = evaltarget[target][0]
+                    newlist.append((score,target,score2))
+                scoredict[src] = newlist
+            else:
+                scoredict[src] = []
 
-      
       while sourcegap or targetgap:
         pregapsrc,pregaptarget = pregap
         postgapsrc,postgaptarget = postgap
@@ -782,74 +701,53 @@ class Aligner:
         if sourcegap and Nto1 > 1:
           
           #try if concatenating source sentences together improves bleu score (beginning of gap)
-          try:
+          if pregapsrc:
             oldscore,oldtarget,oldcorrect = scoredict[pregapsrc][0]
-          except (ValueError,IndexError,KeyError):
-            oldscore,oldtarget,oldcorrect = 0, 0, 0
-          combinedID = tuple(list(pregapsrc)+[sourcegap[0]])
-          try:
-            newscore,newtarget,newcorrect = scoredict[combinedID][0]
-          except (ValueError,IndexError,KeyError):
-            newscore,newtarget, newcorrect = 0, 0,0
-          if newscore > oldscore and newcorrect > oldcorrect and newtarget == pregaptarget:
-              #print('\nsource side: ' + str(combinedID) + ' better than ' + str(pregapsrc))
-              pregap = (combinedID,pregaptarget)
-              del(sourcegap[0])
-              continue
+            combinedID = tuple(list(pregapsrc)+[sourcegap[0]])
+            if combinedID in scoredict:
+                newscore,newtarget,newcorrect = scoredict[combinedID][0]
+
+                if newscore > oldscore and newcorrect > oldcorrect and newtarget == pregaptarget:
+                    #print('\nsource side: ' + str(combinedID) + ' better than ' + str(pregapsrc))
+                    pregap = (combinedID,pregaptarget)
+                    sourcegap.pop(0)
+                    continue
             
           #try if concatenating source sentences together improves bleu score (end of gap)
-          try:
+          if postgapsrc:
             oldscore,oldtarget,oldcorrect = scoredict[postgapsrc][0]
-          except (ValueError,IndexError,KeyError):
-            oldscore,oldtarget,oldcorrect = 0, 0,0
-          combinedID = tuple([sourcegap[-1]] + list(postgapsrc))
-          try:
-            newscore,newtarget, newcorrect = scoredict[combinedID][0]
-          except (ValueError,IndexError,KeyError):
-            newscore,newtarget, newcorrect = 0, 0, 0
-          if newscore > oldscore  and newcorrect > oldcorrect and newtarget == postgaptarget:
-              #print('\nsource side: ' + str(combinedID) + ' better than ' + str(postgapsrc))
-              postgap = (combinedID,postgaptarget)
-              sourcegap.pop()
-              continue
+            combinedID = tuple([sourcegap[-1]] + list(postgapsrc))
+            if combinedID in scoredict:
+                newscore,newtarget, newcorrect = scoredict[combinedID][0]
+                if newscore > oldscore  and newcorrect > oldcorrect and newtarget == postgaptarget:
+                    #print('\nsource side: ' + str(combinedID) + ' better than ' + str(postgapsrc))
+                    postgap = (combinedID,postgaptarget)
+                    sourcegap.pop()
+                    continue
 
         if targetgap  and Nto1 > 1:
           
           #try if concatenating target sentences together improves bleu score (beginning of gap)
-          try:
+          if pregapsrc:
             newscore,newtarget,newcorrect = scoredict[pregapsrc][0]
             if newtarget != pregaptarget:
-              valid = 1
-              for i in newtarget:
-                if not (i in targetgap or i in pregaptarget):
-                  valid = 0
-              if valid:
                 #print('\ntarget side: ' + str(newtarget) + ' better than ' + str(pregaptarget))
                 pregap = (pregapsrc,newtarget)
                 for i in newtarget:
                   if i in targetgap:
                     del(targetgap[targetgap.index(i)])
                 continue
-          except (ValueError,IndexError,KeyError):
-            pass
 
           #try if concatenating target sentences together improves bleu score (end of gap)
-          try:
+          if postgapsrc:
             newscore,newtarget,newcorrect = scoredict[postgapsrc][0]
             if newtarget != postgaptarget:
-              valid = 1
-              for i in newtarget:
-                if not (i in targetgap or i in postgaptarget):
-                  valid = 0
-              if valid:
                 #print('\ntarget side: ' + str(newtarget) + ' better than ' + str(postgaptarget))
                 postgap = (postgapsrc,newtarget)
                 for i in newtarget:
                   if i in targetgap:
                     del(targetgap[targetgap.index(i)])
                 continue
-          except (ValueError,IndexError,KeyError):
-            pass
         
         #concatenation didn't help, and we still have possible one-to-one alignments
         if sourcegap and targetgap:
@@ -868,26 +766,16 @@ class Aligner:
               del(targetgap[0])
               continue
 
-          #naive approach: take first two sentences and align them
-          if "naive1to1" in gapfillheuristics:
-            self.addtoAlignments(pregap)
-            #print('\none-to-one: ' + str((sourcegap[0],)) + ' to' + str((targetgap[0],)))
-            pregap = ((sourcegap[0],),(targetgap[0],))
-            del(sourcegap[0])
-            del(targetgap[0])
-            continue
-          
           #Alternative approach: use Gale & Church.
           if "galechurch" in gapfillheuristics and (max(len(targetgap),len(sourcegap))<4 or max(len(targetgap),len(sourcegap))/min(len(targetgap),len(sourcegap)) < 2):
             tempsrcgap = []
             for src in sourcegap:
-              tempsrcgap.append(self.translist[self.transids.index(src)])
-              #tempsrcgap.append(((ID,),Sent))
+              tempsrcgap.append((src,translist[src]))
             
             temptargetgap = []
             for target in targetgap:
-              temptargetgap.append(self.targetlist[self.targetids.index(target)])
-              #temptargetgap.append(((ID,),Sent))
+              temptargetgap.append((target,targetlist[target]))
+
               
             churchaligns = self.gale_church(tempsrcgap,temptargetgap)
 
@@ -1002,34 +890,35 @@ class Aligner:
         else:
           self.multialign.append((pair,"GAPFILLER"))
 
-          
+
+    def print_alignment_statistics(self, source_len, target_len):
+        multialignsrccount = sum([len(i[0][0]) for i in self.multialign])
+        multialigntargetcount = sum([len(i[0][1]) for i in self.multialign])
+
+        log("Results of BLEU 1-to-1 alignment",2)
+        if loglevel >= 2:
+            bleualignsrc = list(map(itemgetter(0),self.bleualign))
+            for sourceid in range(len(sourcelist)):
+                if sourceid in bleualignsrc:
+                    print('\033[92m' + str(sourceid) + ": "),
+                    print(str(self.bleualign[bleualignsrc.index(sourceid)][1]) + '\033[1;m')
+                else:
+                    print('\033[1;31m'+str(sourceid) + ": unaligned. best cand "),
+                    bestcand = self.scoredict.get(sourceid,[])
+                    if bestcand:
+                        bestcand = bestcand[0][1]
+                    print(str(bestcand)+'\033[1;m')
+
+        if source_len and target_len:
+            log("\n" + str(len(self.bleualign)) + ' out of ' + str(source_len) + ' source sentences aligned by BLEU ' + str(100*len(self.bleualign)/float(source_len)) + '%',2)
+            log("after gap filling, " + str(multialignsrccount) + ' out of '+ str(source_len) + ' source sentences aligned ' + str(100*multialignsrccount/float(source_len)) + '%',2)
+            log("after gap filling, " + str(multialigntargetcount) + ' out of '+ str(target_len) + ' target sentences aligned ' + str(100*multialigntargetcount/float(source_len)) + '%',2)
+
+
     #print out some debugging info, and print output to file
-    def printout(self):
+    def printout(self, sourcelist, translist, targetlist):
 
-      multialignsrccount = sum([len(i[0][0]) for i in self.multialign])
-      multialigntargetcount = sum([len(i[0][1]) for i in self.multialign])
-
-      global loglevel
-
-      log("Results of BLEU 1-to-1 alignment",2)
-      if loglevel >= 2:
-        bleualignsrc = list(map(itemgetter(0),self.bleualign))
-        for sourceid in [i[0] for i in self.translist]:
-          if sourceid in bleualignsrc:
-            print('\033[92m' + str(sourceid) + ": "),
-            print(str(self.bleualign[bleualignsrc.index(sourceid)][1]) + '\033[1;m')
-          else:
-            print('\033[1;31m'+str(sourceid) + ": unaligned. best cand "),
-            bestcand = self.scoredict.get(sourceid,[])
-            if bestcand:
-              bestcand = bestcand[0][1]
-            print(str(bestcand)+'\033[1;m')
-            
-        if self.translist and self.targetlist:
-          log("\n" + str(len(self.bleualign)) + ' out of ' + str(len(self.translist)) + ' source sentences aligned by BLEU ' + str(100*len(self.bleualign)/float(len(self.translist))) + '%',2)
-        
-          log("after gap filling, " + str(multialignsrccount) + ' out of '+ str(len(self.translist)) + ' source sentences aligned ' + str(100*multialignsrccount/float(len(self.translist))) + '%')
-          log("after gap filling, " + str(multialigntargetcount) + ' out of '+ str(len(self.targetlist)) + ' target sentences aligned ' + str(100*multialigntargetcount/float(len(self.targetlist))) + '%',2)
+      self.print_alignment_statistics(len(sourcelist), len(targetlist))
 
       sources = []
       translations = []
@@ -1040,36 +929,57 @@ class Aligner:
       sentscores = {}
       lastsrc,lasttarget = 0,0
       for j,(src,target) in enumerate([i[0] for i in self.multialign]):
-        if self.srctargetswitch:
-          src,target = target,src
-        
+
         if self.options['printempty']:
             if src[0] != lastsrc + 1:
-                sources.extend([self.sourcelist[self.sourceids.index(ID)][1] for ID in range(lastsrc+1,src[0])])
+                sources.extend([sourcelist[ID] for ID in range(lastsrc+1,src[0])])
                 targets.extend(['' for ID in range(lastsrc+1,src[0])])
                 translations.extend(['' for ID in range(lastsrc+1,src[0])])
-                
+
             if target[0] != lasttarget + 1:
                 sources.extend(['' for ID in range(lasttarget+1,target[0])])
-                targets.extend([self.targetlist[self.targetids.index(ID)][1] for ID in range(lasttarget+1,target[0])])
+                targets.extend([targetlist[ID] for ID in range(lasttarget+1,target[0])])
                 translations.extend(['' for ID in range(lasttarget+1,target[0])])
-        
-        sources.append(' '.join([self.sourcelist[self.sourceids.index(ID)][1] for ID in src]))
-        targets.append(' '.join([self.targetlist[self.targetids.index(ID)][1] for ID in target]))
-        translations.append(' '.join([self.translist[self.transids.index(ID)][1] for ID in src]))
-        
+
+        sources.append(' '.join([sourcelist[ID] for ID in src]))
+        targets.append(' '.join([targetlist[ID] for ID in target]))
+        translations.append(' '.join([translist[ID] for ID in src]))
+
         lastsrc = src[-1]
         lasttarget = target[-1]
 
         if self.options['factored']:
-          sources_factored.append(' '.join([self.sourcelist[self.sourceids.index(ID)][2] for ID in src]))
-          targets_factored.append(' '.join([self.targetlist[self.targetids.index(ID)][2] for ID in target]))
+          sources_factored.append(' '.join([sourcelist[ID][1] for ID in src]))
+          targets_factored.append(' '.join([targetlist[ID][1] for ID in target]))
 
         if self.options['filter'] == 'sentences':
-          sentscore = self.score_article([translations[-1]],[targets[-1]])
-          sentscore2 = self.score_article([sources[-1]],[targets[-1]])
+            self.check_sentence_pair(options, sources[-1], translations[-1], targets[-1], sentscores)
+
+      if self.options['filter'] == 'sentences':
+        self.filter_sentence_pairs(sentscores)
+
+      if self.options['filter'] == 'articles':
+        self.filter_article_pairs(options, sources, translations, targets, sources_factored, targets_factored)
+
+      log("\nfinished with article",1)
+      log("\n====================\n",1)
+
+      if self.out1 and self.out2 and not options['filter']:
+        if self.options['factored']:
+            self.out1.writelines(sources_factored)
+            self.out2.writelines(targets_factored)
+        else:
+            self.out1.writelines(sources)
+            self.out2.writelines(targets)
+
+
+    #get BLEU score of sentence pair (for filtering)
+    def check_sentence_pair(self, options, src, trans, target, sentscores):
+
+          sentscore = self.score_article([trans],[target])
+          sentscore2 = self.score_article([src],[target])
           if sentscore2 > sentscore and options['filterlang']:
-            if self.options['factored']:
+            if options['factored']:
               self.out_bad1.write(sources_factored[-1] + '\n')
               self.out_bad2.write(targets_factored[-1] + '\n')
             else:
@@ -1082,76 +992,62 @@ class Aligner:
             else:
               newsentscore = 0
             sentscores[j]=newsentscore
-  
-      #confidence measure
-      if self.options['filter'] == 'sentences':
-        for j,(src,target) in enumerate([i[0] for i in self.multialign]):
-          if j in sentscores: # false if sentence pair has been filtered out by language filter
-            confidence = sentscores[j]
-            self.finalbleu.append((confidence,sentscores.get(j),self.before,self.before+1))
-            self.before = self.before + 1
-            self.sources_out.append(sources[j])
-            self.targets_out.append(targets[j])
-          
-      if self.options['filter'] == 'articles':
-        articlescore = self.score_article(translations,targets)
-        articlescore2 = self.score_article(sources,targets)
-          
-        log('\nBLEU score for article: ' + str(articlescore) + ' / ' + str(articlescore2),1)
-
-        if articlescore2 > articlescore and options['filterlang']:
-          if self.options['factored']:
-            sources,targets = sources_factored,targets_factored
-          if self.srctargetswitch:
-            sources,targets = targets,sources
-          for i,line in enumerate(sources):
-            self.out_bad1.write(line + '\n')
-            self.out_bad2.write(targets[i] + '\n')
-        else:
-          articlescorex = self.score_article(targets,translations)
-          if articlescore > 0:
-            articlescore = (articlescore*articlescorex*2)/(articlescore+articlescorex)
-          before = self.before
-          after = self.before + len(self.multialign)
-          self.before = after
-          self.finalbleu.append((articlescore,articlescore2,before,after))
-         
-          if self.options['factored']:
-            sources,targets = sources_factored,targets_factored
-            
-          self.sources_out += sources
-          self.targets_out += targets
 
 
-      log("\nfinished with article",1)
-      log("\n====================\n",1)
-
-      if self.out1 and self.out2 and not options['filter']:
-        if self.options['factored']:
-          sources,targets = sources_factored,targets_factored
-        if self.srctargetswitch:
-          sources,targets = targets,sources
-        for line in sources:
-          self.out1.write(line + '\n')
-        for line in targets:
-          self.out2.write(line + '\n')
-       
-       
-    #get BLEU score for article pair
+    # get BLEU score for article pair
     def score_article(self,test,ref):
-      global bleu_ngrams
       refs = [bleu.cook_refs([refSent],bleu_ngrams) for refSent in ref]
       testcook = []
 
       for i,line in enumerate(test):
         testcook.append(bleu.cook_test(line,refs[i],bleu_ngrams))
-        
+
       score = bleu.score_cooked(testcook,bleu_ngrams)
       return score
 
 
+    # store BLEU score for each sentence pair (used for filtering at the very end)
+    def filter_sentence_pairs(self, sentscores):
+        before = 0
+        for j,(src,target) in enumerate([i[0] for i in self.multialign]):
+            if j in sentscores: # false if sentence pair has been filtered out by language filter
+                confidence = sentscores[j]
+                self.finalbleu.append((confidence,sentscores.get(j),before,before+1))
+                before += 1
+                self.sources_out.append(sources[j])
+                self.targets_out.append(targets[j])
+
+
+    # store BLEU score for each article pair (used for filtering at the very end)
+    def filter_article_pairs(self, options, sources, translations, targets, sources_factored, targets_factored):
+        articlescore = self.score_article(translations,targets)
+        articlescore2 = self.score_article(sources,targets)
+
+        log('\nBLEU score for article: ' + str(articlescore) + ' / ' + str(articlescore2),1)
+
+        if articlescore2 > articlescore and options['filterlang']:
+            if self.options['factored']:
+                sources,targets = sources_factored,targets_factored
+            for i,line in enumerate(sources):
+                self.out_bad1.write(line + '\n')
+                self.out_bad2.write(targets[i] + '\n')
+            else:
+                articlescorex = self.score_article(targets,translations)
+                if articlescore > 0:
+                    articlescore = (articlescore*articlescorex*2)/(articlescore+articlescorex)
+                after = before + len(self.multialign)
+                self.finalbleu.append((articlescore,articlescore2,before,after))
+                before = after
+
+            if self.options['factored']:
+                sources,targets = sources_factored,targets_factored
+
+            self.sources_out += sources
+            self.targets_out += targets
+
+
     #filter bad sentence pairs / article pairs
-    def filtering(self):
+    def write_filtered(self):
       
       self.finalbleu = sorted(self.finalbleu,key=itemgetter(0),reverse=True)
       log(self.finalbleu,2)
@@ -1192,8 +1088,6 @@ class Aligner:
       stopped = 0
 
       if self.out1 and self.out2 and self.out_bad1 and self.out_bad2:
-        if self.srctargetswitch:
-          self.sources_out,self.targets_out = self.targets_out,self.sources_out
         for i,line in enumerate(self.sources_out):
           if i in resumewrite:
             stopped = 0
@@ -1207,218 +1101,6 @@ class Aligner:
             self.out2.write(self.targets_out[i] + '\n')
 
 
-    def evaluate(self,i):
-      
-      gold1990map = {0:9,1:15,2:3,3:6,4:13,5:17,6:19}
-      
-      if self.options['eval'] == 1957:
-        import golddev
-        goldalign = golddev.goldalign
-      elif self.options['eval'] == 1990:
-        import goldeval
-        goldalign = goldeval.gold[gold1990map[i]]
-      
-      goldalign = [(tuple(src),tuple(target)) for src,target in goldalign]
-      
-      results = {}
-      paircounts = {}
-      for pair in [(len(srclist),len(targetlist)) for srclist,targetlist in goldalign]:
-      
-        paircounts[pair] = paircounts.get(pair,0) + 1
-          
-        pairs_normalized = {}
-        for pair in paircounts:
-          pairs_normalized[pair] = (paircounts[pair],paircounts[pair] / float(len(goldalign)))
-      
-      print('\ngold alignment frequencies\n')
-      for aligntype,(abscount,relcount) in sorted(pairs_normalized.items(),key=itemgetter(1),reverse=True):
-        print(aligntype),
-        print(' - '),
-        print(abscount),
-        print(' ('+str(relcount)+')')
-        #self.recall(aligntype,goldalign,[i[0] for i in self.multialign])
-      
-      print('\ntotal recall: '),
-      print(str(len(goldalign)) + ' pairs in gold')
-      (tpstrict,fnstrict,tplax,fnlax) = self.recall((0,0),goldalign,[i[0] for i in self.multialign])
-      results['recall'] = (tpstrict,fnstrict,tplax,fnlax)
-
-      #for gapdist in set([(len(i[0]),len(i[1])) for i in goldalign]):
-        #print('precision (for ' + str(gapdist) + ' alignments)')
-        #testalign = []
-        #for i in self.multialign:
-          #if (len(i[0][0]),len(i[0][1])) == gapdist:
-            #testalign.append(i)
-        #self.precision(goldalign,testalign)
-
-      for aligntype in set([i[1] for i in self.multialign]):
-        testalign = []
-        for i in self.multialign:
-          if i[1] == aligntype:
-            testalign.append(i)
-        print('precision for alignment type ' + str(aligntype) + ' ( ' + str(len(testalign)) + ' alignment pairs)')
-        self.precision(goldalign,testalign)
-
-      print('\ntotal precision:'),
-      print(str(len(self.multialign)) + ' alignment pairs found')
-      (tpstrict,fpstrict,tplax,fplax) = self.precision(goldalign,self.multialign)
-      results['precision'] = (tpstrict,fpstrict,tplax,fplax)
-
-      return results
-
-
-    def precision(self,goldalign,testalign):
-      
-      tpstrict=0
-      tplax=0
-      fpstrict=0
-      fplax=0
-      for (src,target) in [i[0] for i in testalign]:
-        if (src,target) == ((),()):
-          continue
-        if (src,target) in goldalign:
-          tpstrict +=1
-          tplax += 1
-        else:
-          y = 0
-          for srclist,targetlist in goldalign:
-            for s in src:
-              if y==1:
-                break   
-              for t in target:
-                if y==1:
-                  break                   
-                if s in srclist and t in targetlist:
-                  fpstrict +=1
-                  tplax +=1
-                  y=1
-                  #print('lax match: '),
-                  #print('test ' + str((src,target)) + '\t gold ' + str((srclist,targetlist)))
-                  break
-          if y == 0:
-            fpstrict +=1
-            fplax +=1
-            log('false positive: ',2),
-            log((src,target),2)
-      if tpstrict+fpstrict > 0:
-        print('precision strict: '),
-        print((tpstrict/float(tpstrict+fpstrict)))
-        print('precision lax: '),
-        print((tplax/float(tplax+fplax)))
-        print('')
-      else:
-        print('nothing to find')
-
-      return tpstrict,fpstrict,tplax,fplax
-
-
-    def recall(self,aligntype,goldalign,testalign):
-      
-      srclen,targetlen = aligntype
-      
-      if srclen == 0 and targetlen == 0:
-        gapdists = [(0,0) for i in goldalign]
-      
-      elif srclen == 0 or targetlen == 0:
-        print('nothing to find')
-        return
-      
-      else:
-        gapdists = [(len(srclist),len(targetlist)) for srclist,targetlist in goldalign]
-      
-      tpstrict=0
-      tplax=0
-      fnstrict=0
-      fnlax=0
-      for i,pair in enumerate(gapdists):
-        if aligntype == pair:
-          (srclist,targetlist) = goldalign[i]
-          if not srclist or not targetlist:
-            continue
-          elif (srclist,targetlist) in testalign:
-            tpstrict +=1
-            tplax +=1
-          else:
-            y = 0
-            for src,target in testalign:
-              for s in src:
-                if y==1:
-                  break                
-                for t in target:
-                  if y==1:
-                    break
-                  if s in srclist and t in targetlist:
-                    tplax +=1
-                    fnstrict+=1
-                    y=1
-                    #print('lax match: '),
-                    #print('test ' + str((src,target)) + '\t gold ' + str((srclist,targetlist)))
-                    break
-            if y == 0:
-              fnstrict+=1
-              fnlax+=1
-              log('not found: ',2),
-              log(goldalign[i],2)
-
-      if tpstrict+fnstrict>0:
-        print('recall strict: '),
-        print((tpstrict/float(tpstrict+fnstrict)))
-        print('recall lax: '),
-        print((tplax/float(tplax+fnlax)))
-        print('')
-      else:
-        print('nothing to find')
-
-      return tpstrict,fnstrict,tplax,fnlax
-
-
-    def finalevaluation(self,results):
-      recall = [0,0,0,0]
-      precision = [0,0,0,0]
-      for i,k in results.items():
-        #print(i)
-        for m,j in enumerate(recall):
-          recall[m] = j+ k['recall'][m]
-        for m,j in enumerate(precision):
-          precision[m] = j+ k['precision'][m]
-
-      pstrict = (precision[0]/float(precision[0]+precision[1]))
-      plax =(precision[2]/float(precision[2]+precision[3]))
-      rstrict= (recall[0]/float(recall[0]+recall[1]))
-      rlax=(recall[2]/float(recall[2]+recall[3]))
-      if (pstrict+rstrict) == 0:
-        fstrict = 0
-      else:
-        fstrict=2*(pstrict*rstrict)/(pstrict+rstrict)
-      if (plax+rlax) == 0:
-        flax=0
-      else:
-        flax=2*(plax*rlax)/(plax+rlax)
-
-      print('\n=========================\n')
-      print('total results:')
-      print('recall strict: '),
-      print(rstrict)
-      print('recall lax: '),
-      print(rlax)
-      print('')
-
-      print('precision strict: '),
-      print(pstrict)
-      print('precision lax: '),
-      print(plax)
-      print('')
-      
-      print('f1 strict: '),
-      print(fstrict)
-      print('f1 lax: '),
-      print(flax)
-      print('')
-      
-      #myout = "%.2f & %.2f & %.2f & %.2f & %.2f & %.2f &" %(pstrict,rstrict,fstrict,plax,rlax,flax)
-      #print(myout)
-          
-
 #Allows parallelizing of alignment
 if multiprocessing_enabled:
   class AlignMultiprocessed(multiprocessing.Process,Aligner):
@@ -1428,7 +1110,7 @@ if multiprocessing_enabled:
       self.options = options
       self.tasks = tasks
       self.scores = scores 
-      self.bleualign = None
+      self.bleualign = []
       self.scoredict = None
 
     def run(self):
