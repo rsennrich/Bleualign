@@ -522,7 +522,6 @@ class Aligner:
 
    #use this if you want to implement your own similarity score
     def eval_sents_dummy(self,translist,targetlist):
-      global maxalternatives
       scoredict = {}
       
       for testID,testSent in translist:
@@ -540,9 +539,6 @@ class Aligner:
     # given list of test sentences and list of reference sentences, calculate bleu scores
     #if you want to replace bleu with your own similarity measure, use eval_sents_dummy
     def eval_sents(self,translist,targetlist):
-      
-      global maxalternatives
-      global bleu_ngrams
       
       scoredict = {}
       cooked_test = {}
@@ -607,85 +603,67 @@ class Aligner:
       return scoredict
 
 
-    #part of topological sorting algorithm
-    def visit(self,src_n,target_n):
-        if (src_n,target_n) in self.visited:
-            return
-        else:
-            self.visited.add((src_n,target_n))
-            self.remaining.remove((src_n,target_n))
-            #instead of iterating through all edges, we compute them on the go
-            for src_m,target_m in list(self.remaining):
-                if src_m > src_n and target_m > target_n:
-                  self.visit(src_m,target_m)
-            self.ordered.append((src_n,target_n))
+    #follow the backpointers in score matrix to extract best path of 1-to-1 alignments
+    def extract_best_path(self,matrix):
+
+        i = len(matrix)-1
+        j = len(matrix[i])-1
+        pointer = ''
+        best_path = []
+
+        while i >= 0 and j >= 0 and pointer != '-':
+            score, pointer = matrix[i][j]
+            if pointer == '^':
+                i -= 1
+            elif pointer == '<':
+                j -= 1
+            elif pointer == 'match':
+                best_path.append((self.translist[i][0],self.targetlist[j][0]))
+                i -= 1
+                j -= 1
+
+        best_path.reverse()
+        return best_path
 
 
-    #topological sorting algorithm
-    #input self.alignList
-    #output self.ordered
-    def tsort(self):
-        self.visited = set()
-        self.ordered = []
-        self.remaining = set(self.alignList)
-
-        for src,target in self.alignList:
-            self.visit(src,target)  
-
-        del(self.visited)
-
-
-    #find longest path of good BLEU alignments for which following conditions are true:
-    #BLEU score is maximal, and path is monotonically ordered.
+    #dynamic programming search for best path of alignments (maximal score)
     def pathfinder(self):
-        #populate list with all alignment candidates
-        self.alignList = []
-        scores = {}
-        for itemTrans in [int(i[0]) for i in self.translist]:
-            align = self.scoredict[itemTrans]
-            if align:
-                for alternative in align:
-                  target = int(alternative[1])
-                  score = alternative[0]
-                  #score = 1 #for longest-path search
-                  self.alignList.append((itemTrans,target))
-                  scores[(itemTrans,target)] = score
 
-        #topological sorting
-        self.tsort()
+        matrix = [[(0,'-') for column in self.targetlist] for row in self.translist]
 
-        #longest-path search in acyclic directed graph through dynamic programming
-        pred = len(self.ordered)*[(0,0)] # store predecessor for each node in longest path
-        self.ordered.reverse()
-        
-        #initialize length of path to each node (from virtual start node)
-        length_to = len(self.ordered)*[0]
-        for i,(src,target) in enumerate(self.ordered):
-            length_to[i] = scores[src,target]
-        
-        for i,(src_v,target_v) in enumerate(self.ordered):  
-        
-          #instead of iterating through list of edges, we calculate them on the go
-          for j,(src_w,target_w) in enumerate(self.ordered):
-              if target_w > target_v and src_w > src_v:
-                  newscore = length_to[i] + scores[src_w,target_w]
-                  if length_to[j] <= newscore:
-                      length_to[j] = newscore
-                      pred[j] = (src_v,target_v)
+        for i, (s_id, s_sent) in enumerate(self.translist):
+            alignments = dict([(target, score) for (score, target, correct) in self.scoredict[s_id]])
+
+            for j, (t_id, t_sent) in enumerate(self.targetlist):
+                best_score, best_pointer = 0,'-'
+
+                if i:
+                    score, pointer = matrix[i-1][j]
+                    if score > best_score:
+                        best_score = score
+                        best_pointer = '^'
+
+                if j:
+                    score, pointer = matrix[i][j-1]
+                    if score > best_score:
+                        best_score = score
+                        best_pointer = '<'
+
+                if t_id in alignments:
+                    score = alignments[t_id]
+
+                    if i and j:
+                        score += matrix[i-1][j-1][0]
+
+                    if score > best_score:
+                        best_score = score
+                        best_pointer = 'match'
+
+                matrix[i][j] = (best_score, best_pointer)
+
+        self.bleualign = self.extract_best_path(matrix)
 
 
-        #reconstruct longest path
-        if self.ordered:
-          next_translation, next_tar = self.ordered[length_to.index(max(length_to))]
-        else:
-          next_tar = 0
-
-        self.bleualign = []
-        while next_tar:
-          self.bleualign.append((next_translation,next_tar))
-          next_translation,next_tar=pred[self.ordered.index((next_translation,next_tar))]
-
-      
     #find unaligned sentences and create work packets for gapfiller()
     #gapfiller() takes two sentence pairs and all unaligned sentences in between as arguments; gapfinder() extracts these.
     def gapfinder(self):
@@ -700,7 +678,7 @@ class Aligner:
       #find gaps: lastpair is considered pre-gap, pair is post-gap
       lastpair = ((),())
       src, target = None, None
-      for src,target in reversed(self.bleualign):
+      for src,target in self.bleualign:
 
         oldsrc,oldtarget = lastpair
         
