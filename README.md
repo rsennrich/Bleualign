@@ -1,4 +1,5 @@
 Bleualign
+=========
 An MT-based sentence alignment tool
 
 Copyright ⓒ 2010
@@ -11,7 +12,7 @@ Project Homepage: http://github.com/rsennrich/bleualign
 This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation
 
 GENERAL INFO
-------------------
+------------
 
 Bleualign is a tool to align parallel texts (i.e. a text and its translation) on a sentence level.
 Additionally to the source and target text, Bleualign requires an automatic translation of at least one of the texts.
@@ -36,14 +37,25 @@ Sentence alignment does not cross these delimiters: reliable delimiters improve 
 
 Given the files sourcetext.txt, targettext.txt and sourcetranslation.txt (the latter being sentence-aligned with sourcetext.txt), a sample call is
 
-./bleualign.py -s sourcetext.txt -t targettext.txt --srctotarget sourcetranslation.txt -o outputfile
+    ./bleualign.py -s sourcetext.txt -t targettext.txt --srctotarget sourcetranslation.txt -o outputfile
 
 It is also possible to provide several translations and/or translations in the other translation direction.
 bleualign will run once per translation provided, the final output being the intersection of the individual runs (i.e. sentence pairs produced in each individual run).
 
-./bleualign.py -s sourcetext.txt -t targettext.txt --srctotarget sourcetranslation1.txt --srctotarget sourcetranslation2.txt --targettosrc targettranslation1.txt -o outputfile
+    ./bleualign.py -s sourcetext.txt -t targettext.txt --srctotarget sourcetranslation1.txt --srctotarget sourcetranslation2.txt --targettosrc targettranslation1.txt -o outputfile
 
-./bleualign.py -h will show more usage options
+    ./bleualign.py -h will show more usage options
+
+To facilitate batch processing multiple files, `batch_align.py` can be used.
+
+    python batch_align directory source_suffix target_suffix translation_suffix
+
+example: given the directory `raw_files` with the files `0.de`, `0.fr` and `0.trans` and so on, (`0.trans` being the translation of `0.de` into the target language), then this command will align all files: 
+
+    python batch_align.py raw_files de fr trans
+
+This will produce the files `0.de.aligned` and `0.fr.aligned`
+
 
 PUBLICATIONS
 ------------
@@ -60,12 +72,4 @@ Rico Sennrich; Martin Volk (2011):
 CONTACT
 -------
 
-For questions and feeback, please contact:
-
-Rico Sennrich
-Institut für Computerlinguistik
-Universität Zuerich
-Binzmühlestrasse 14
-8050 Zürich, Schweiz
-
-sennrich@cl.uzh.ch
+For questions and feeback, please contact sennrich@cl.uzh.ch or use the GitHub repository.

@@ -83,9 +83,9 @@ def usage():
     print('\t\tVerbosity. Choose amount of debugging output. Default value 1; choose 0 for (mostly) quiet mode, 2 for verbose output')
 
 
-def load_arguments():
+def load_arguments(sysargv):
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "def:ho:s:t:v:", ["factored", "filter=", "filterthreshold=", "filterlang", "printempty", "deveval","eval", "help", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "verbosity="])
+        opts, args = getopt.getopt(sysargv[1:], "def:ho:s:t:v:", ["factored", "filter=", "filterthreshold=", "filterlang", "printempty", "deveval","eval", "help", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "verbosity="])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(str(err)) # will print something like "option -a not recognized"
@@ -241,9 +241,14 @@ class Aligner:
         self.src = open(options['srcfile'],'rU')
       if options['targetfile']:
         self.target = open(options['targetfile'],'rU')
-        
-      if options['output']:
+
+      if options['output-src']:
+        self.out1 = open(options['output-src'],'w')
+      elif options['output']:
         self.out1 = open(options['output'] + '-s','w')
+      if options['output-target']:
+        self.out2 = open(options['output-target'],'w')
+      elif options['output']:
         self.out2 = open(options['output'] + '-t','w')
       if options['output'] and options['filter']:
         self.out_bad1 = open(options['output'] + '-bad-s','w')
@@ -964,7 +969,7 @@ If you're *really* sure that this is what you want, find this error message and 
       log("\nfinished with article",1)
       log("\n====================\n",1)
 
-      if self.out1 and self.out2 and not options['filter']:
+      if self.out1 and self.out2 and not self.options['filter']:
         if self.options['factored']:
             self.out1.writelines(sources_factored)
             self.out2.writelines(targets_factored)
@@ -1128,7 +1133,7 @@ if multiprocessing_enabled:
 
 if __name__ == '__main__':
 
-    options = load_arguments()
+    options = load_arguments(sys.argv)
 
     a = Aligner(options)
     a.mainloop()
