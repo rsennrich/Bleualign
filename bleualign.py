@@ -242,11 +242,11 @@ class Aligner:
       if options['targetfile']:
         self.target = open(options['targetfile'],'rU')
 
-      if options['output-src']:
+      if 'output-src' in options:
         self.out1 = open(options['output-src'],'w')
       elif options['output']:
         self.out1 = open(options['output'] + '-s','w')
-      if options['output-target']:
+      if 'output-target' in options:
         self.out2 = open(options['output-target'],'w')
       elif options['output']:
         self.out2 = open(options['output'] + '-t','w')
