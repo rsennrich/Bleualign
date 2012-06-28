@@ -524,15 +524,15 @@ If you're *really* sure that this is what you want, find this error message and 
 
 
     #follow the backpointers in score matrix to extract best path of 1-to-1 alignments
-    def extract_best_path(self,matrix):
+    def extract_best_path(self,pointers):
 
-        i = len(matrix)-1
-        j = len(matrix[i])-1
+        i = len(pointers)-1
+        j = len(pointers[0])-1
         pointer = ''
         best_path = []
 
-        while i >= 0 and j >= 0 and pointer != '-':
-            score, pointer = matrix[i][j]
+        while i >= 0 and j >= 0:
+            pointer = pointers[i][j]
             if pointer == '^':
                 i -= 1
             elif pointer == '<':
@@ -549,39 +549,34 @@ If you're *really* sure that this is what you want, find this error message and 
     #dynamic programming search for best path of alignments (maximal score)
     def pathfinder(self, translist, targetlist):
 
-        matrix = [[(0,'-') for column in targetlist] for row in translist]
+        # add an extra row/column to the matrix and start filling it from 1,1 (to avoid exceptions for first row/column)
+        matrix = [[0 for column in range(len(targetlist)+1)] for row in range(len(translist)+1)]
+        pointers = [['' for column in range(len(targetlist))] for row in range(len(translist))]
 
-        for i, s_sent in enumerate(translist):
+        for i in range(len(translist)):
             alignments = dict([(target, score) for (score, target, correct) in self.scoredict[i]])
 
-            for j, t_sent in enumerate(targetlist):
-                best_score, best_pointer = 0,'-'
+            for j in range(len(targetlist)):
 
-                if i:
-                    score, pointer = matrix[i-1][j]
-                    if score > best_score:
-                        best_score = score
-                        best_pointer = '^'
+                best_score = matrix[i][j+1]
+                best_pointer = '^'
 
-                if j:
-                    score, pointer = matrix[i][j-1]
-                    if score > best_score:
-                        best_score = score
-                        best_pointer = '<'
+                score = matrix[i+1][j]
+                if score > best_score:
+                    best_score = score
+                    best_pointer = '<'
 
                 if j in alignments:
-                    score = alignments[j]
-
-                    if i and j:
-                        score += matrix[i-1][j-1][0]
+                    score = alignments[j] + matrix[i][j]
 
                     if score > best_score:
                         best_score = score
                         best_pointer = 'match'
 
-                matrix[i][j] = (best_score, best_pointer)
+                matrix[i+1][j+1] = best_score
+                pointers[i][j] = best_pointer
 
-        self.bleualign = self.extract_best_path(matrix)
+        self.bleualign = self.extract_best_path(pointers)
 
 
     #find unaligned sentences and create work packets for gapfiller()
