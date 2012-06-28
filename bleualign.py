@@ -201,7 +201,7 @@ def collect_article(src,srctotarget,target,targettosrc,options):
 
                 if options['factored']:
                     rawline = ' '.join(word.split('|')[0] for word in line.split())
-                    textlist.append(rawline,line.rstrip())
+                    textlist.append((rawline,line.rstrip()))
                 else:
                     textlist.append(line.rstrip())
             else:
@@ -903,7 +903,7 @@ If you're *really* sure that this is what you want, find this error message and 
         log("Results of BLEU 1-to-1 alignment",2)
         if loglevel >= 2:
             bleualignsrc = list(map(itemgetter(0),self.bleualign))
-            for sourceid in range(len(sourcelist)):
+            for sourceid in range(source_len):
                 if sourceid in bleualignsrc:
                     print('\033[92m' + str(sourceid) + ": "),
                     print(str(self.bleualign[bleualignsrc.index(sourceid)][1]) + '\033[1;m')
@@ -946,16 +946,22 @@ If you're *really* sure that this is what you want, find this error message and 
                 targets.extend([targetlist[ID] for ID in range(lasttarget+1,target[0])])
                 translations.extend(['' for ID in range(lasttarget+1,target[0])])
 
-        sources.append(' '.join([sourcelist[ID] for ID in src]))
-        targets.append(' '.join([targetlist[ID] for ID in target]))
-        translations.append(' '.join([translist[ID] for ID in src]))
+
+
 
         lastsrc = src[-1]
         lasttarget = target[-1]
 
+        translations.append(' '.join([translist[ID] for ID in src]))
         if self.options['factored']:
-          sources_factored.append(' '.join([sourcelist[ID][1] for ID in src]))
-          targets_factored.append(' '.join([targetlist[ID][1] for ID in target]))
+            sources.append(' '.join([sourcelist[ID][0] for ID in src]))
+            targets.append(' '.join([targetlist[ID][0] for ID in target]))
+            sources_factored.append(' '.join([sourcelist[ID][1] for ID in src]))
+            targets_factored.append(' '.join([targetlist[ID][1] for ID in target]))
+
+        else:
+            sources.append(' '.join([sourcelist[ID] for ID in src]))
+            targets.append(' '.join([targetlist[ID] for ID in target]))
 
         if self.options['filter'] == 'sentences':
             self.check_sentence_pair(options, sources[-1], translations[-1], targets[-1], sentscores)
