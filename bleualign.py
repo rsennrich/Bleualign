@@ -972,11 +972,11 @@ If you're *really* sure that this is what you want, find this error message and 
 
       if self.out1 and self.out2 and not self.options['filter']:
         if self.options['factored']:
-            self.out1.writelines(sources_factored)
-            self.out2.writelines(targets_factored)
+            self.out1.writelines([line + '\n' for line in sources_factored])
+            self.out2.writelines([line + '\n' for line in targets_factored])
         else:
-            self.out1.writelines(sources)
-            self.out2.writelines(targets)
+            self.out1.writelines([line + '\n' for line in sources])
+            self.out2.writelines([line + '\n' for line in targets])
 
 
     #get BLEU score of sentence pair (for filtering)
