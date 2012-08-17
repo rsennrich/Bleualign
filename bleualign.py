@@ -634,11 +634,11 @@ If you're *really* sure that this is what you want, find this error message and 
       if Nto1 > 1 or "bleu1to1" in gapfillheuristics:
 
         #concatenate all sentences in pregap alignment pair
-        tmpstr =  ''.join([translist[i] for i in pregap[0]])
+        tmpstr =  ' '.join([translist[i] for i in pregap[0]])
         evalsrc.append((pregap[0],tmpstr))
 
         #concatenate all sentences in pregap alignment pair
-        tmpstr =  ''.join([targetlist[i] for i in pregap[1]])
+        tmpstr =  ' '.join([targetlist[i] for i in pregap[1]])
         evaltarget.append((pregap[1],tmpstr))
         
         #search will be pruned to this window
@@ -656,11 +656,11 @@ If you're *really* sure that this is what you want, find this error message and 
           evaltarget.append(((target,),Sent))
         
         #concatenate all sentences in postgap alignment pair
-        tmpstr =  ''.join([translist[i] for i in postgap[0]])
+        tmpstr =  ' '.join([translist[i] for i in postgap[0]])
         evalsrc.append((postgap[0],tmpstr))
         
         #concatenate all sentences in postgap alignment pair
-        tmpstr =  ''.join([targetlist[i] for i in postgap[1]])
+        tmpstr =  ' '.join([targetlist[i] for i in postgap[1]])
         evaltarget.append((postgap[1],tmpstr))
 
 
