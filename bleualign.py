@@ -378,8 +378,8 @@ class Aligner:
         if not self.options['galechurch']:
             log("""ERROR: no translation available:
 BLEU scores can be computed between the source and target text, but this is not the intended usage of Bleualign and may result in poor performance!
-If you're *really* sure that this is what you want, find this error message and remove the exit() statement on the next line""",1)
-            exit()
+If you're *really* sure that this is what you want, find this error message and remove the sys.exit() function on the next line""",1)
+            sys.exit(2)
         else:
             phase1 = [self.align(raw_sourcelist, raw_targetlist)]
 
