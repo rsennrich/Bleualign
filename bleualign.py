@@ -925,6 +925,13 @@ If you're *really* sure that this is what you want, find this error message and 
       targets = []
       sources_factored = []
       targets_factored = []
+      if self.options['factored']:
+        sources_output = sources_factored
+        targets_output = targets_factored
+      else:
+        sources_output = sources
+        targets_output = targets
+
       self.multialign = sorted(self.multialign,key=itemgetter(0))
       sentscores = {}
       lastsrc,lasttarget = 0,0
@@ -959,13 +966,13 @@ If you're *really* sure that this is what you want, find this error message and 
             targets.append(' '.join([targetlist[ID] for ID in target]))
 
         if self.options['filter'] == 'sentences':
-            self.check_sentence_pair(options, sources[-1], translations[-1], targets[-1], sentscores)
+            self.check_sentence_pair(j, options, sources[-1], translations[-1], targets[-1], sources_output[-1], targets_output[-1], sentscores)
 
       if self.options['filter'] == 'sentences':
-        self.filter_sentence_pairs(sentscores)
+              self.filter_sentence_pairs(sentscores, sources_output, targets_output)
 
       if self.options['filter'] == 'articles':
-        self.filter_article_pairs(options, sources, translations, targets, sources_factored, targets_factored)
+        self.filter_article_pairs(options, sources, translations, targets, sources_output, targets_output)
 
       log("\nfinished with article",1)
       log("\n====================\n",1)
@@ -980,20 +987,16 @@ If you're *really* sure that this is what you want, find this error message and 
 
 
     #get BLEU score of sentence pair (for filtering)
-    def check_sentence_pair(self, options, src, trans, target, sentscores):
+    def check_sentence_pair(self, j, options, src, trans, target, source_out, target_out, sentscores):
 
           sentscore = self.score_article([trans],[target])
           sentscore2 = self.score_article([src],[target])
           if sentscore2 > sentscore and options['filterlang']:
-            if options['factored']:
-              self.out_bad1.write(sources_factored[-1] + '\n')
-              self.out_bad2.write(targets_factored[-1] + '\n')
-            else:
-              self.out_bad1.write(sources[-1] + '\n')
-              self.out_bad2.write(targets[-1] + '\n')
+            self.out_bad1.write(source_out + '\n')
+            self.out_bad2.write(target_out + '\n')
           else:
             if sentscore > 0:
-              sentscorex = self.score_article([targets[-1]],[translations[-1]])
+              sentscorex = self.score_article([target],[trans])
               newsentscore = (2*sentscore*sentscorex)/(sentscore+sentscorex)
             else:
               newsentscore = 0
@@ -1013,19 +1016,19 @@ If you're *really* sure that this is what you want, find this error message and 
 
 
     # store BLEU score for each sentence pair (used for filtering at the very end)
-    def filter_sentence_pairs(self, sentscores):
+    def filter_sentence_pairs(self, sentscores, sources_output, targets_output):
         before = 0
         for j,(src,target) in enumerate([i[0] for i in self.multialign]):
             if j in sentscores: # false if sentence pair has been filtered out by language filter
                 confidence = sentscores[j]
                 self.finalbleu.append((confidence,sentscores.get(j),before,before+1))
                 before += 1
-                self.sources_out.append(sources[j])
-                self.targets_out.append(targets[j])
+                self.sources_out.append(sources_output[j])
+                self.targets_out.append(targets_output[j])
 
 
     # store BLEU score for each article pair (used for filtering at the very end)
-    def filter_article_pairs(self, options, sources, translations, targets, sources_factored, targets_factored):
+    def filter_article_pairs(self, options, sources, translations, targets, sources_output, targets_output):
         articlescore = self.score_article(translations,targets)
         articlescore2 = self.score_article(sources,targets)
 
@@ -1045,11 +1048,8 @@ If you're *really* sure that this is what you want, find this error message and 
                 self.finalbleu.append((articlescore,articlescore2,before,after))
                 before = after
 
-            if self.options['factored']:
-                sources,targets = sources_factored,targets_factored
-
-            self.sources_out += sources
-            self.targets_out += targets
+            self.sources_out += sources_output
+            self.targets_out += targets_output
 
 
     #filter bad sentence pairs / article pairs
