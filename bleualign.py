@@ -143,7 +143,10 @@ def load_arguments(sysargv):
         elif o in ("-t", "--target"):
             options['targetfile'] = a
         elif o == "--srctotarget":
-            options['srctotarget'].append(a)
+            if a == '-':
+                options['no_translation_override'] = True
+            else:
+                options['srctotarget'].append(a)
         elif o == "--targettosrc":
             options['targettosrc'].append(a)
         elif o == "--printempty":
@@ -293,6 +296,12 @@ class Aligner:
                     break
                 except:
                     time.sleep(0.1)
+                    for p in scorers:
+                        if p.exitcode == 1:
+                            for p in scorers:
+                                p.terminate()
+                            producer.terminate()
+                            sys.exit(1)
                     continue
 
             (sourcelist,targetlist,translist1,translist2) = data
@@ -375,13 +384,11 @@ class Aligner:
         phase2.append(self.align(translist, raw_sourcelist))
 
       if not (translist1 or translist2):
-        if not self.options['galechurch']:
-            log("""ERROR: no translation available:
-BLEU scores can be computed between the source and target text, but this is not the intended usage of Bleualign and may result in poor performance!
-If you're *really* sure that this is what you want, find this error message and remove the exit() statement on the next line""",1)
-            exit()
-        else:
+        if 'no_translation_override' in self.options or self.options['galechurch']:
             phase1 = [self.align(raw_sourcelist, raw_targetlist)]
+        else:
+            log("ERROR: no translation available: BLEU scores can be computed between the source and target text, but this is not the intended usage of Bleualign and may result in poor performance! If you're *really* sure that this is what you want, use the option '--srctotarget -'", 1)
+            sys.exit(1)
 
       if len(phase1) > 1:
         log("intersecting all srctotarget alignments",1)
