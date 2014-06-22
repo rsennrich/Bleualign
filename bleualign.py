@@ -605,8 +605,8 @@ class Aligner:
             oldtarget = (-1,)
 
         #identify gap sizes
-        sourcegap = range(oldsrc[-1]+1,src)
-        targetgap = range(oldtarget[-1]+1,target)
+        sourcegap = list(range(oldsrc[-1]+1,src))
+        targetgap = list(range(oldtarget[-1]+1,target))
 
         if targetgap or sourcegap:
           lastpair = self.gapfiller(sourcegap, targetgap, lastpair, ((src,),(target,)), translist, targetlist)
@@ -621,8 +621,8 @@ class Aligner:
           target = -1
 
       #search for gap after last alignment pair
-      sourcegap = range(src+1, len(translist))
-      targetgap = range(target+1, len(targetlist))
+      sourcegap = list(range(src+1, len(translist)))
+      targetgap = list(range(target+1, len(targetlist)))
 
       if targetgap or sourcegap:
         lastpair = self.gapfiller(sourcegap, targetgap, lastpair, ((),()), translist, targetlist)
