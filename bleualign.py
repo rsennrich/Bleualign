@@ -399,7 +399,7 @@ class Aligner:
 
       if len(phase2) > 1:
         log("intersecting all targettosrc alignments",1)
-        phase2b = sorted(set(phase2[0]).intersection(set(x) for x in phase2[1:]))
+        phase2 = sorted(set(phase2[0]).intersection(*[set(x) for x in phase2[1:]]))
       elif phase2:
         phase2 = phase2[0]
 
