@@ -4,6 +4,7 @@ from bleualign import Aligner, load_arguments
 import os
 import itertools
 import bleualign
+import filecmp
 
 class TestByEval(unittest.TestCase):
 	def setUp(self):
@@ -26,17 +27,19 @@ class TestByEval(unittest.TestCase):
 		self.main_test('fileOptions')
 
 	def main_test(self, option_function):
-		test_path = os.path.dirname(os.path.abspath(__file__))
-		eval_path = os.path.join(test_path, '..', 'eval')
-		result_path = os.path.join(test_path, 'result')
+		test_dir = os.path.dirname(os.path.abspath(__file__))
+		eval_dir = os.path.join(test_dir, '..', 'eval')
+		result_dir = os.path.join(test_dir, 'result')
+		refer_dir = os.path.join(test_dir, 'refer')
+		bleualign.log = lambda a, b:None
 		for test_set, test_argument in [('eval1957', '-d'), ('eval1989', '-e')]:
 			fr_text = []
 			de_text = []
-			for filename in os.listdir(eval_path):
+			for filename in os.listdir(eval_dir):
 				if filename.startswith(test_set):
 					attr = filename.split('.')
 					if len(attr) == 3:
-						filepath = os.path.join(eval_path, filename)
+						filepath = os.path.join(eval_dir, filename)
 						if attr[2] == 'fr':
 							fr_text.append(filepath)
 						elif attr[2] == 'de':
@@ -58,14 +61,24 @@ class TestByEval(unittest.TestCase):
 			for fr_file, de_file in test_files:
 				srctotarget_file = fr_file
 				targettosrc_file = de_file
-				output_file = self.output_file_path(result_path, srctotarget_file, targettosrc_file)
+				output_file = self.output_file_path(result_dir, srctotarget_file, targettosrc_file)
+				output_path = os.path.join(result_dir , output_file)
 				options = getattr(self, option_function)(test_argument,
-					srctotarget_file, targettosrc_file, output_file)
-				bleualign.log = lambda a, b:None
+					srctotarget_file, targettosrc_file, output_path)
 				a = Aligner(options)
 				a.mainloop()
 				# compare result with data in refer
-# 				self.assertEqual(first, second, msg)
+				refer_path = os.path.join(refer_dir , output_file)
+				self.cmp_files(output_path + '-s', refer_path + '-s')
+				self.cmp_files(output_path + '-t', refer_path + '-t')
+	def cmp_files(self,result,refer):
+		result_file=open(result)
+		refer_file=open(refer)
+		result_data=list(result_file)
+		refer_data=list(refer_file)
+		result_file.close()
+		refer_file.close()
+		self.assertEqual(result_data,refer_data,result)
 	def fileOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
 		options = load_arguments(['', eval_type])
@@ -73,7 +86,7 @@ class TestByEval(unittest.TestCase):
 		options['targettosrc'] = targettosrc_file
 		options['output'] = output_file
 		return options
-	def output_file_path(self, result_path, srctotarget_file, targettosrc_file):
+	def output_file_path(self, result_dir, srctotarget_file, targettosrc_file):
 		source_set = set()
 		source_trans = []
 		for filename in itertools.chain.from_iterable(
@@ -86,7 +99,7 @@ class TestByEval(unittest.TestCase):
 			raise RuntimeError
 		output_filename = '.'.join(
 			itertools.chain.from_iterable(([source_set.pop()], source_trans)))
-		return os.path.join(result_path , output_filename)
+		return output_filename
 
 if __name__ == '__main__':
 	unittest.main()
