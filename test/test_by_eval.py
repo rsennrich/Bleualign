@@ -2,7 +2,6 @@
 import unittest
 from bleualign import Aligner, load_arguments
 import os
-import sys
 import itertools
 
 class TestByEval(unittest.TestCase):
@@ -42,15 +41,24 @@ class TestByEval(unittest.TestCase):
 			fr_text.sort()
 			de_text.sort()
 # 			print(fr_text, de_text)
-			for fr_file in fr_text:
-				for de_file in de_text:
-					srctotarget_file=[fr_file]
-					targettosrc_file=[de_file]
-					output_file=self.output_file_path(result_path, srctotarget_file, targettosrc_file)
-					self.runAndGetResult(test_argument,
-						srctotarget_file, targettosrc_file, output_file)
+			test_files = []
+			test_files.append((fr_text[0:1], de_text[-3:-2]))
+			test_files.append((fr_text, []))
+			test_files.append(([], de_text))
+			test_files.append((fr_text[1::3], de_text[-2:-1]))
+			test_files.append((fr_text[2:3], de_text[3:4]))
+			test_files.append((fr_text[0:1], []))
+			test_files.append(([], de_text[-1:]))
+			test_files.append((fr_text[2:], de_text[:3]))
+			test_files.append((fr_text, de_text))
+			for fr_file, de_file in test_files:
+				srctotarget_file = fr_file
+				targettosrc_file = de_file
+				output_file = self.output_file_path(result_path, srctotarget_file, targettosrc_file)
+				self.runAndGetResult(test_argument,
+					srctotarget_file, targettosrc_file, output_file)
 	def runAndGetResult(self, eval_type,
-				srctotarget_file, targettosrc_file,output_file):
+				srctotarget_file, targettosrc_file, output_file):
 		options = load_arguments(['', eval_type])
 		options['srctotarget'] = srctotarget_file
 		options['targettosrc'] = targettosrc_file
@@ -58,7 +66,7 @@ class TestByEval(unittest.TestCase):
 # 		sys.stdout = open('hi', 'w')
 		a = Aligner(options)
 		a.mainloop()
-	def output_file_path(self,result_path,srctotarget_file, targettosrc_file):
+	def output_file_path(self, result_path, srctotarget_file, targettosrc_file):
 		source_set = set()
 		source_trans = []
 		for filename in itertools.chain.from_iterable(
@@ -70,7 +78,7 @@ class TestByEval(unittest.TestCase):
 		if len(source_set) > 1:
 			raise RuntimeError
 		output_filename = '.'.join(
-			itertools.chain.from_iterable(([source_set.pop()],source_trans)))
+			itertools.chain.from_iterable(([source_set.pop()], source_trans)))
 		return os.path.join(result_path , output_filename)
 
 if __name__ == '__main__':
