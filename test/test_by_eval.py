@@ -1,8 +1,10 @@
 
 import unittest
-from bleualign import Aligner, load_arguments
+from bleualign import Aligner, load_arguments, log
 import os
 import itertools
+import sys
+import bleualign
 
 class TestByEval(unittest.TestCase):
 	def setUp(self):
@@ -43,20 +45,23 @@ class TestByEval(unittest.TestCase):
 			test_files = []
 			test_files.append((fr_text[0:1], de_text[-3:-2]))
 			test_files.append((fr_text, []))
-			test_files.append(([], de_text))
 			test_files.append((fr_text[1::3], de_text[-2:-1]))
 			test_files.append((fr_text[2:3], de_text[3:4]))
 			test_files.append((fr_text[0:1], []))
-			test_files.append(([], de_text[-1:]))
 			test_files.append((fr_text[2:], de_text[:3]))
 			test_files.append((fr_text, de_text))
+# 			test_files.append(([], [])) add in another test after
+# 			test_files.append(([], de_text))
+# 			test_files.append(([], de_text[-1:]))
 			for fr_file, de_file in test_files:
 				srctotarget_file = fr_file
 				targettosrc_file = de_file
 				output_file = self.output_file_path(result_path, srctotarget_file, targettosrc_file)
 				options=self.fileOptions(test_argument,
 					srctotarget_file, targettosrc_file, output_file)
-			# 		sys.stdout = open('hi', 'w')
+# 				sys.stdout = open('hi', 'w')
+				print(srctotarget_file, targettosrc_file, output_file)
+				bleualign.log=lambda a,b:None
 				a = Aligner(options)
 				a.mainloop()
 	def fileOptions(self, eval_type,
