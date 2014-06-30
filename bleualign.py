@@ -109,17 +109,18 @@ def load_arguments(sysargv):
     bold = "\033[1m"
     reset = "\033[0;0m"
 
+    project_path = os.path.dirname(os.path.abspath(__file__))
     for o, a in opts:
         if o in ("-h", "--help"):
             usage()
             sys.exit()
         elif o in ("-e", "--eval"):
-            options['srcfile'] = os.path.join(sys.path[0],'eval','eval1989.de')
-            options['targetfile'] = os.path.join(sys.path[0],'eval','eval1989.fr')
+            options['srcfile'] = os.path.join(project_path,'eval','eval1989.de')
+            options['targetfile'] = os.path.join(project_path,'eval','eval1989.fr')
             options['eval'] = 1990
         elif o in ("-d", "--deveval"):
-            options['srcfile'] = os.path.join(sys.path[0],'eval','eval1957.de')
-            options['targetfile'] = os.path.join(sys.path[0],'eval','eval1957.fr')
+            options['srcfile'] = os.path.join(project_path,'eval','eval1957.de')
+            options['targetfile'] = os.path.join(project_path,'eval','eval1957.fr')
             options['eval'] = 1957
         elif o in ("-o", "--output"):
             options['output'] = a
