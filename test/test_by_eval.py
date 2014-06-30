@@ -1,9 +1,8 @@
 
 import unittest
-from bleualign import Aligner, load_arguments, log
+from bleualign import Aligner, load_arguments
 import os
 import itertools
-import sys
 import bleualign
 
 class TestByEval(unittest.TestCase):
@@ -23,7 +22,10 @@ class TestByEval(unittest.TestCase):
 		self.options['verbosity'] = 1
 		self.options['printempty'] = False
 
-	def test_google(self):
+	def test_original_file_option(self):
+		self.main_test('fileOptions')
+
+	def main_test(self, option_function):
 		test_path = os.path.dirname(os.path.abspath(__file__))
 		eval_path = os.path.join(test_path, '..', 'eval')
 		result_path = os.path.join(test_path, 'result')
@@ -57,13 +59,13 @@ class TestByEval(unittest.TestCase):
 				srctotarget_file = fr_file
 				targettosrc_file = de_file
 				output_file = self.output_file_path(result_path, srctotarget_file, targettosrc_file)
-				options=self.fileOptions(test_argument,
+				options = getattr(self, option_function)(test_argument,
 					srctotarget_file, targettosrc_file, output_file)
-# 				sys.stdout = open('hi', 'w')
-				print(srctotarget_file, targettosrc_file, output_file)
-				bleualign.log=lambda a,b:None
+				bleualign.log = lambda a, b:None
 				a = Aligner(options)
 				a.mainloop()
+				# compare result with data in refer
+# 				self.assertEqual(first, second, msg)
 	def fileOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
 		options = load_arguments(['', eval_type])
