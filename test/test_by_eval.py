@@ -12,15 +12,14 @@ class TestByEval(unittest.TestCase):
 		self.options['output'] = None
 		self.options['factored'] = False
 		self.options['filter'] = None
-		options = {}
-		options['filterthreshold'] = 90
-		options['filterlang'] = None
-		options['srctotarget'] = []
-		options['targettosrc'] = []
-		options['eval'] = None
-		options['galechurch'] = None
-		options['verbosity'] = 1
-		options['printempty'] = False
+		self.options['filterthreshold'] = 90
+		self.options['filterlang'] = None
+		self.options['srctotarget'] = []
+		self.options['targettosrc'] = []
+		self.options['eval'] = None
+		self.options['galechurch'] = None
+		self.options['verbosity'] = 1
+		self.options['printempty'] = False
 
 	def test_google(self):
 		test_path = os.path.dirname(os.path.abspath(__file__))
@@ -55,17 +54,18 @@ class TestByEval(unittest.TestCase):
 				srctotarget_file = fr_file
 				targettosrc_file = de_file
 				output_file = self.output_file_path(result_path, srctotarget_file, targettosrc_file)
-				self.runAndGetResult(test_argument,
+				options=self.fileOptions(test_argument,
 					srctotarget_file, targettosrc_file, output_file)
-	def runAndGetResult(self, eval_type,
+			# 		sys.stdout = open('hi', 'w')
+				a = Aligner(options)
+				a.mainloop()
+	def fileOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
 		options = load_arguments(['', eval_type])
 		options['srctotarget'] = srctotarget_file
 		options['targettosrc'] = targettosrc_file
 		options['output'] = output_file
-# 		sys.stdout = open('hi', 'w')
-		a = Aligner(options)
-		a.mainloop()
+		return options
 	def output_file_path(self, result_path, srctotarget_file, targettosrc_file):
 		source_set = set()
 		source_trans = []
