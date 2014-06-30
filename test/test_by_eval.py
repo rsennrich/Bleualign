@@ -44,14 +44,21 @@ class TestByEval(unittest.TestCase):
 # 			print(fr_text, de_text)
 			for fr_file in fr_text:
 				for de_file in de_text:
+					srctotarget_file=[fr_file]
+					targettosrc_file=[de_file]
+					output_file=self.output_file_path(result_path, srctotarget_file, targettosrc_file)
 					self.runAndGetResult(test_argument,
-						[fr_file], [de_file], result_path)
+						srctotarget_file, targettosrc_file, output_file)
 	def runAndGetResult(self, eval_type,
-				srctotarget_file, targettosrc_file,
-				result_path):
+				srctotarget_file, targettosrc_file,output_file):
 		options = load_arguments(['', eval_type])
 		options['srctotarget'] = srctotarget_file
 		options['targettosrc'] = targettosrc_file
+		options['output'] = output_file
+# 		sys.stdout = open('hi', 'w')
+		a = Aligner(options)
+		a.mainloop()
+	def output_file_path(self,result_path,srctotarget_file, targettosrc_file):
 		source_set = set()
 		source_trans = []
 		for filename in itertools.chain.from_iterable(
@@ -64,10 +71,7 @@ class TestByEval(unittest.TestCase):
 			raise RuntimeError
 		output_filename = '.'.join(
 			itertools.chain.from_iterable(([source_set.pop()],source_trans)))
-		options['output'] = os.path.join(result_path , output_filename)
-# 		sys.stdout = open('hi', 'w')
-		a = Aligner(options)
-		a.mainloop()
+		return os.path.join(result_path , output_filename)
 
 if __name__ == '__main__':
 	unittest.main()
