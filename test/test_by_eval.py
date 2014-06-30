@@ -3,6 +3,7 @@ import unittest
 from bleualign import Aligner, load_arguments
 import os
 import sys
+import itertools
 
 class TestByEval(unittest.TestCase):
 	def setUp(self):
@@ -44,20 +45,25 @@ class TestByEval(unittest.TestCase):
 			for fr_file in fr_text:
 				for de_file in de_text:
 					self.runAndGetResult(test_argument,
-						fr_file, de_file, result_path)
+						[fr_file], [de_file], result_path)
 	def runAndGetResult(self, eval_type,
 				srctotarget_file, targettosrc_file,
 				result_path):
 		options = load_arguments(['', eval_type])
-		options['srctotarget'] = [srctotarget_file]
-		options['targettosrc'] = [targettosrc_file]
-		s2t_set, s2t_trans = os.path.basename(srctotarget_file).split('.')[:2]
-		t2s_set, t2s_trans = os.path.basename(targettosrc_file).split('.')[:2]
-		if s2t_set != t2s_set:
+		options['srctotarget'] = srctotarget_file
+		options['targettosrc'] = targettosrc_file
+		source_set = set()
+		source_trans = []
+		for filename in itertools.chain.from_iterable(
+				(srctotarget_file, ['..'], targettosrc_file)):
+			filename_set, filename_trans = os.path.basename(filename).split('.')[:2]
+			source_set.add(filename_set)
+			source_trans.append(filename_trans)
+		source_set.discard('')
+		if len(source_set) > 1:
 			raise RuntimeError
-		print(srctotarget_file,targettosrc_file)
-		print(s2t_set, s2t_trans, t2s_trans)
-		output_filename = '.'.join([s2t_set, s2t_trans, t2s_trans])
+		output_filename = '.'.join(
+			itertools.chain.from_iterable(([source_set.pop()],source_trans)))
 		options['output'] = os.path.join(result_path , output_filename)
 # 		sys.stdout = open('hi', 'w')
 		a = Aligner(options)
