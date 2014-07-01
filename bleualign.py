@@ -527,8 +527,6 @@ class Aligner:
                 scorelist.append((meanscore,refID,cooked_test['correct']))
               
         scoredict[testID] = sorted(scorelist,key=itemgetter(0),reverse=True)[:maxalternatives]
-        if testID == 1:
-            print(scoredict)
         
       return scoredict
 
