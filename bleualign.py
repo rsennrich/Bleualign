@@ -4,6 +4,7 @@
 # Author: Rico Sennrich <sennrich@cl.uzh.ch>
 # For licensing information, see LICENSE
 
+from __future__ import division, print_function
 import sys
 import os
 import getopt
@@ -331,7 +332,7 @@ class Aligner:
 
       else:
         for i,(sourcelist,targetlist,translist1,translist2) in enumerate(collect_article(self.src,self.srctotarget,self.target,self.targettosrc,self.options)):
-          log('reading in article ' + str(i) + ': ',1),
+          log('reading in article ' + str(i) + ': ',1)
 
           self.multialign = self.process(sourcelist,targetlist,translist1,translist2)
           if translist1:
@@ -526,6 +527,8 @@ class Aligner:
                 scorelist.append((meanscore,refID,cooked_test['correct']))
               
         scoredict[testID] = sorted(scorelist,key=itemgetter(0),reverse=True)[:maxalternatives]
+        if testID == 1:
+            print(scoredict)
         
       return scoredict
 
@@ -907,10 +910,10 @@ class Aligner:
             bleualignsrc = list(map(itemgetter(0),self.bleualign))
             for sourceid in range(source_len):
                 if sourceid in bleualignsrc:
-                    print('\033[92m' + str(sourceid) + ": "),
+                    print('\033[92m' + str(sourceid) + ": ", end='')
                     print(str(self.bleualign[bleualignsrc.index(sourceid)][1]) + '\033[1;m')
                 else:
-                    print('\033[1;31m'+str(sourceid) + ": unaligned. best cand "),
+                    print('\033[1;31m'+str(sourceid) + ": unaligned. best cand ", end='')
                     bestcand = self.scoredict.get(sourceid,[])
                     if bestcand:
                         bestcand = bestcand[0][1]
@@ -1131,7 +1134,7 @@ if multiprocessing_enabled:
       i,data = self.tasks.get()
       while i != None:
 
-        log('reading in article ' + str(i) + ': ',1),
+        log('reading in article ' + str(i) + ': ',1)
         sourcelist,targetlist,translist1,translist2 = data
         self.multialign = self.process(sourcelist,targetlist,translist1,translist2)
         self.scores[i] = (data,self.multialign,self.bleualign,self.scoredict)

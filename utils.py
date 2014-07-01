@@ -6,6 +6,7 @@
 
 # Evaluation functions for Bleualign
 
+from __future__ import division, print_function
 import sys
 import os
 from operator import itemgetter
@@ -39,12 +40,12 @@ def evaluate(article, options, testalign):
     
     print('\ngold alignment frequencies\n')
     for aligntype,(abscount,relcount) in sorted(pairs_normalized.items(),key=itemgetter(1),reverse=True):
-        print(aligntype),
-        print(' - '),
-        print(abscount),
+        print(aligntype,end='')
+        print(' - ',end='')
+        print(abscount,end='')
         print(' ('+str(relcount)+')')
     
-    print('\ntotal recall: '),
+    print('\ntotal recall: ',end='')
     print(str(len(goldalign)) + ' pairs in gold')
     (tpstrict,fnstrict,tplax,fnlax) = recall((0,0),goldalign,[i[0] for i in testalign])
     results['recall'] = (tpstrict,fnstrict,tplax,fnlax)
@@ -57,7 +58,7 @@ def evaluate(article, options, testalign):
         print('precision for alignment type ' + str(aligntype) + ' ( ' + str(len(testalign_bytype)) + ' alignment pairs)')
         precision(goldalign,testalign_bytype)
 
-    print('\ntotal precision:'),
+    print('\ntotal precision:',end='')
     print(str(len(testalign)) + ' alignment pairs found')
     (tpstrict,fpstrict,tplax,fplax) = precision(goldalign,testalign)
     results['precision'] = (tpstrict,fpstrict,tplax,fplax)
@@ -88,12 +89,12 @@ def precision(goldalign,testalign):
             else:
                 fpstrict +=1
                 fplax +=1
-                log('false positive: ',2),
+                log('false positive: ',2)
                 log((src,target),2)
     if tpstrict+fpstrict > 0:
-        print('precision strict: '),
+        print('precision strict: ',end='')
         print((tpstrict/float(tpstrict+fpstrict)))
-        print('precision lax: '),
+        print('precision lax: ',end='')
         print((tplax/float(tplax+fplax)))
         print('')
     else:
@@ -188,21 +189,21 @@ def finalevaluation(results):
 
     print('\n=========================\n')
     print('total results:')
-    print('recall strict: '),
+    print('recall strict: ',end='')
     print(rstrict)
-    print('recall lax: '),
+    print('recall lax: ',end='')
     print(rlax)
     print('')
 
-    print('precision strict: '),
+    print('precision strict: ',end='')
     print(pstrict)
     print('precision lax: '),
     print(plax)
     print('')
     
-    print('f1 strict: '),
+    print('f1 strict: ',end='')
     print(fstrict)
-    print('f1 lax: '),
+    print('f1 lax: ',end='')
     print(flax)
     print('')
     
