@@ -5,6 +5,7 @@ import os
 import itertools
 import bleualign
 import filecmp
+import time
 
 class TestByEval(unittest.TestCase):
 	def setUp(self):
@@ -32,6 +33,7 @@ class TestByEval(unittest.TestCase):
 		result_dir = os.path.join(test_dir, 'result')
 		refer_dir = os.path.join(test_dir, 'refer')
 		bleualign.log = lambda a, b:None
+		compare_files=[]
 		for test_set, test_argument in [('eval1957', '-d'), ('eval1989', '-e')]:
 			fr_text = []
 			de_text = []
@@ -67,10 +69,15 @@ class TestByEval(unittest.TestCase):
 					srctotarget_file, targettosrc_file, output_path)
 				a = Aligner(options)
 				a.mainloop()
+# 				time.sleep(5)
 				# compare result with data in refer
 				refer_path = os.path.join(refer_dir , output_file)
-				self.cmp_files(output_path + '-s', refer_path + '-s')
-				self.cmp_files(output_path + '-t', refer_path + '-t')
+				compare_files.append((output_path + '-s', refer_path + '-s'))
+				compare_files.append((output_path + '-t', refer_path + '-t'))
+# 				self.cmp_files(output_path + '-s', refer_path + '-s')
+# 				self.cmp_files(output_path + '-t', refer_path + '-t')
+		for result_path, refer_path in compare_files:
+			self.cmp_files(result_path, refer_path)
 	def cmp_files(self,result,refer):
 		result_file=open(result)
 		refer_file=open(refer)
