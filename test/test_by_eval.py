@@ -33,7 +33,7 @@ class TestByEval(unittest.TestCase):
 		result_dir = os.path.join(test_dir, 'result')
 		refer_dir = os.path.join(test_dir, 'refer')
 		bleualign.log = lambda a, b:None
-		compare_files=[]
+		compare_files = []
 		for test_set, test_argument in [('eval1957', '-d'), ('eval1989', '-e')]:
 			fr_text = []
 			de_text = []
@@ -42,10 +42,11 @@ class TestByEval(unittest.TestCase):
 					attr = filename.split('.')
 					if len(attr) == 3:
 						filepath = os.path.join(eval_dir, filename)
-						if attr[2] == 'fr':
-							fr_text.append(filepath)
-						elif attr[2] == 'de':
-							de_text.append(filepath)
+						if attr[1] != 'clean':
+							if attr[2] == 'fr':
+								fr_text.append(filepath)
+							elif attr[2] == 'de':
+								de_text.append(filepath)
 			fr_text.sort()
 			de_text.sort()
 # 			print(fr_text, de_text)
@@ -78,14 +79,14 @@ class TestByEval(unittest.TestCase):
 # 				self.cmp_files(output_path + '-t', refer_path + '-t')
 		for result_path, refer_path in compare_files:
 			self.cmp_files(result_path, refer_path)
-	def cmp_files(self,result,refer):
-		result_file=open(result)
-		refer_file=open(refer)
-		result_data=list(result_file)
-		refer_data=list(refer_file)
+	def cmp_files(self, result, refer):
+		result_file = open(result)
+		refer_file = open(refer)
+		result_data = list(result_file)
+		refer_data = list(refer_file)
 		result_file.close()
 		refer_file.close()
-		self.assertEqual(result_data,refer_data,result)
+		self.assertEqual(result_data, refer_data, result)
 	def fileOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
 		options = load_arguments(['', eval_type])
