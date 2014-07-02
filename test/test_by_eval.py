@@ -25,8 +25,14 @@ class TestByEval(unittest.TestCase):
 		self.options['verbosity'] = 1
 		self.options['printempty'] = False
 
-	def test_original_file_option(self):
+	def test_originalFileName(self):
 		self.main_test('fileNameOptions')
+	def test_fileObject(self):
+		self.main_test('fileObjectOptions')
+	def test_stringIo(self):
+		self.main_test('stringIoOptions')
+	def test_string(self):
+		self.main_test('stringOptions')
 
 	def main_test(self, option_function):
 		test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -78,9 +84,9 @@ class TestByEval(unittest.TestCase):
 				compare_files.append((output_path + '-t', refer_path + '-t', output_target))
 # 				self.cmp_files(output_path + '-s', refer_path + '-s')
 # 				self.cmp_files(output_path + '-t', refer_path + '-t')
-		for result_path, refer_path,output_object in compare_files:
-			self.cmp_files(result_path, refer_path,output_object)
-	def cmp_files(self, result, refer,output_object):
+		for result_path, refer_path, output_object in compare_files:
+			self.cmp_files(result_path, refer_path, output_object)
+	def cmp_files(self, result, refer, output_object):
 		refer_file = open(refer)
 		refer_data = refer_file.read()
 		refer_file.close()
@@ -89,7 +95,7 @@ class TestByEval(unittest.TestCase):
 			result_data = result_file.read()
 			result_file.close()
 		except:
-			result_data=output_object.getvalue()
+			result_data = output_object.getvalue()
 		self.assertEqual(result_data, refer_data, result)
 	def fileNameOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
@@ -103,32 +109,39 @@ class TestByEval(unittest.TestCase):
 				srctotarget_file, targettosrc_file, output_file):
 		options = self.fileNameOptions(
 			eval_type, srctotarget_file, targettosrc_file, output_file)
-		for attr in 'srcfile', 'targetfile', 'output-src', 'outptu-target':
+		for attr in 'srcfile', 'targetfile':
 			options[attr] = open(options[attr])
 		for attr in 'srctotarget', 'targettosrc':
-			for index in range(len(options[attr])):
-				options[attr][index] = open(options[attr][index])
+			fileArray = []
+			for fileName in options[attr]:
+				fileArray.append(fileName)
+			options[attr] = fileArray
+		for attr in 'output-src', 'output-target':
+			options[attr] = open(options[attr], 'w')
 		return options
 	def stringIoOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
 		options = self.fileNameOptions(
 			eval_type, srctotarget_file, targettosrc_file, output_file)
-		for attr in 'srcfile', 'targetfile', 'output-src', 'outptu-target':
-			options[attr] = open(options[attr])
+		options.pop('output-src')
+		options.pop('output-target')
+		for attr in 'srcfile', 'targetfile':
+			options[attr] = io.StringIO(open(options[attr]).read())
 		for attr in 'srctotarget', 'targettosrc':
 			for index in range(len(options[attr])):
-				options[attr][index] = open(options[attr][index])
+				options[attr][index] = io.StringIO(open(options[attr][index]))
 		return options
 	def stringOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
 		options = self.fileNameOptions(
 			eval_type, srctotarget_file, targettosrc_file, output_file)
-		for attr in 'srcfile', 'targetfile', 'output-src', 'outptu-target':
+		options.pop('output-src')
+		options.pop('output-target')
+		for attr in 'srcfile', 'targetfile':
 			options[attr] = list(open(options[attr]))
 		for attr in 'srctotarget', 'targettosrc':
 			for index in range(len(options[attr])):
 				options[attr][index] = list(open(options[attr][index]))
-		return options
 		return options
 	def fileInStringOutOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
