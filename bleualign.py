@@ -1048,13 +1048,13 @@ class Aligner:
             for i,line in enumerate(sources):
                 self.out_bad1.write(line + '\n')
                 self.out_bad2.write(targets[i] + '\n')
-            else:
-                articlescorex = self.score_article(targets,translations)
-                if articlescore > 0:
-                    articlescore = (articlescore*articlescorex*2)/(articlescore+articlescorex)
-                after = before + len(self.multialign)
-                self.finalbleu.append((articlescore,articlescore2,before,after))
-                before = after
+        else:
+            articlescorex = self.score_article(targets,translations)
+            if articlescore > 0:
+                articlescore = (articlescore*articlescorex*2)/(articlescore+articlescorex)
+            before = len(self.sources_out)
+            after = before + len(self.multialign)
+            self.finalbleu.append((articlescore,articlescore2,before,after))
 
             self.sources_out += sources_output
             self.targets_out += targets_output
