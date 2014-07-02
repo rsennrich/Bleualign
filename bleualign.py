@@ -347,6 +347,11 @@ class Aligner:
             print('evaluation ' + str(i))
             results[i] = evaluate(i, self.options, self.multialign)
 
+      if self.out1:
+      	self.out1.flush()
+      if self.out2:
+      	self.out2.flush()
+
       if self.options['eval']:
         finalevaluation(results)
 
