@@ -358,6 +358,7 @@ class Aligner:
       if self.options['filter']:
         self.write_filtered()
 
+      return self.out1,self.out2
 
     #Start different alignment runs depending on which and how many translations are sent to program; intersect results.
     def process(self,sourcelist,targetlist,translist1,translist2):

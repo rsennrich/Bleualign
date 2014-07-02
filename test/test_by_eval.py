@@ -6,6 +6,7 @@ import itertools
 import bleualign
 import filecmp
 import time
+import io
 
 class TestByEval(unittest.TestCase):
 	def setUp(self):
@@ -25,7 +26,7 @@ class TestByEval(unittest.TestCase):
 		self.options['printempty'] = False
 
 	def test_original_file_option(self):
-		self.main_test('fileOptions')
+		self.main_test('fileNameOptions')
 
 	def main_test(self, option_function):
 		test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -69,31 +70,72 @@ class TestByEval(unittest.TestCase):
 				options = getattr(self, option_function)(test_argument,
 					srctotarget_file, targettosrc_file, output_path)
 				a = Aligner(options)
-				a.mainloop()
+				output_src, output_target = a.mainloop()
 # 				time.sleep(5)
 				# compare result with data in refer
 				refer_path = os.path.join(refer_dir , output_file)
-				compare_files.append((output_path + '-s', refer_path + '-s'))
-				compare_files.append((output_path + '-t', refer_path + '-t'))
+				compare_files.append((output_path + '-s', refer_path + '-s', output_src))
+				compare_files.append((output_path + '-t', refer_path + '-t', output_target))
 # 				self.cmp_files(output_path + '-s', refer_path + '-s')
 # 				self.cmp_files(output_path + '-t', refer_path + '-t')
-		for result_path, refer_path in compare_files:
-			self.cmp_files(result_path, refer_path)
-	def cmp_files(self, result, refer):
-		result_file = open(result)
+		for result_path, refer_path,output_object in compare_files:
+			self.cmp_files(result_path, refer_path,output_object)
+	def cmp_files(self, result, refer,output_object):
 		refer_file = open(refer)
-		result_data = list(result_file)
-		refer_data = list(refer_file)
-		result_file.close()
+		refer_data = refer_file.read()
 		refer_file.close()
+		try:
+			result_file = open(result)
+			result_data = result_file.read()
+			result_file.close()
+		except:
+			result_data=output_object.getvalue()
 		self.assertEqual(result_data, refer_data, result)
-	def fileOptions(self, eval_type,
+	def fileNameOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
 		options = load_arguments(['', eval_type])
 		options['srctotarget'] = srctotarget_file
 		options['targettosrc'] = targettosrc_file
-		options['output'] = output_file
+		options['output-src'] = output_file + '-s'
+		options['output-target'] = output_file + '-t'
 		return options
+	def fileObjectOptions(self, eval_type,
+				srctotarget_file, targettosrc_file, output_file):
+		options = self.fileNameOptions(
+			eval_type, srctotarget_file, targettosrc_file, output_file)
+		for attr in 'srcfile', 'targetfile', 'output-src', 'outptu-target':
+			options[attr] = open(options[attr])
+		for attr in 'srctotarget', 'targettosrc':
+			for index in range(len(options[attr])):
+				options[attr][index] = open(options[attr][index])
+		return options
+	def stringIoOptions(self, eval_type,
+				srctotarget_file, targettosrc_file, output_file):
+		options = self.fileNameOptions(
+			eval_type, srctotarget_file, targettosrc_file, output_file)
+		for attr in 'srcfile', 'targetfile', 'output-src', 'outptu-target':
+			options[attr] = open(options[attr])
+		for attr in 'srctotarget', 'targettosrc':
+			for index in range(len(options[attr])):
+				options[attr][index] = open(options[attr][index])
+		return options
+	def stringOptions(self, eval_type,
+				srctotarget_file, targettosrc_file, output_file):
+		options = self.fileNameOptions(
+			eval_type, srctotarget_file, targettosrc_file, output_file)
+		for attr in 'srcfile', 'targetfile', 'output-src', 'outptu-target':
+			options[attr] = list(open(options[attr]))
+		for attr in 'srctotarget', 'targettosrc':
+			for index in range(len(options[attr])):
+				options[attr][index] = list(open(options[attr][index]))
+		return options
+		return options
+	def fileInStringOutOptions(self, eval_type,
+				srctotarget_file, targettosrc_file, output_file):
+		options = load_arguments(['', eval_type])
+		options['srctotarget'] = srctotarget_file
+		options['targettosrc'] = targettosrc_file
+		return options, options['output-src'], options['output-target']
 	def output_file_path(self, result_dir, srctotarget_file, targettosrc_file):
 		source_set = set()
 		source_trans = []
