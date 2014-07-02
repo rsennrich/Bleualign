@@ -249,7 +249,7 @@ class Aligner:
           if isinstance(options['srcfile'], io.TextIOBase):
             self.src = options['srcfile']
           else:
-            self.target = io.StringIO('\n'.join(options['srcfile']))
+            self.src = io.StringIO('\n'.join(options['srcfile']))
       if options['targetfile']:
         try:
           self.target = open(options['targetfile'], 'rU')

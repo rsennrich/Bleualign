@@ -4,8 +4,6 @@ from bleualign import Aligner, load_arguments
 import os
 import itertools
 import bleualign
-import filecmp
-import time
 import io
 
 class TestByEval(unittest.TestCase):
@@ -128,8 +126,10 @@ class TestByEval(unittest.TestCase):
 		for attr in 'srcfile', 'targetfile':
 			options[attr] = io.StringIO(open(options[attr]).read())
 		for attr in 'srctotarget', 'targettosrc':
-			for index in range(len(options[attr])):
-				options[attr][index] = io.StringIO(open(options[attr][index]))
+			ioArray = []
+			for fileName in options[attr]:
+				ioArray.append(io.StringIO(open(fileName).read()))
+			options[attr] = ioArray
 		return options
 	def stringOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
@@ -140,8 +140,10 @@ class TestByEval(unittest.TestCase):
 		for attr in 'srcfile', 'targetfile':
 			options[attr] = list(open(options[attr]))
 		for attr in 'srctotarget', 'targettosrc':
-			for index in range(len(options[attr])):
-				options[attr][index] = list(open(options[attr][index]))
+			strArray = []
+			for fileName in options[attr]:
+				strArray.append(list(open(fileName)))
+			options[attr] = strArray
 		return options
 	def fileInStringOutOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
