@@ -244,7 +244,7 @@ class Aligner:
       
       if options['srcfile']:
         try:
-          self.src = open(options['srcfile'], 'rU')
+          self.src = io.open(options['srcfile'], 'rU')
         except:
           if isinstance(options['srcfile'], io.TextIOBase):
             self.src = options['srcfile']
@@ -252,7 +252,7 @@ class Aligner:
             self.src = io.StringIO('\n'.join(options['srcfile']))
       if options['targetfile']:
         try:
-          self.target = open(options['targetfile'], 'rU')
+          self.target = io.open(options['targetfile'], 'rU')
         except:
           if isinstance(options['targetfile'], io.TextIOBase):
             self.target = options['targetfile']
@@ -261,31 +261,31 @@ class Aligner:
 
       if 'output-src' in options:
         try:
-          self.out1 = open(options['output-src'], 'w')
+          self.out1 = io.open(options['output-src'], 'w')
         except:
           self.out1 = options['output-src']
       elif options['output']:
-        self.out1 = open(options['output'] + '-s', 'w')
+        self.out1 = io.open(options['output'] + '-s', 'w')
       else:
         self.out1 = io.StringIO()
       if 'output-target' in options:
         try:
-          self.out2 = open(options['output-target'], 'w')
+          self.out2 = io.open(options['output-target'], 'w')
         except:
           self.out2 = options['output-target']
       elif options['output']:
-        self.out2 = open(options['output'] + '-t', 'w')
+        self.out2 = io.open(options['output'] + '-t', 'w')
       else:
         self.out2 = io.StringIO()
 
       if options['output'] and options['filter']:
-        self.out_bad1 = open(options['output'] + '-bad-s', 'w')
-        self.out_bad2 = open(options['output'] + '-bad-t', 'w')
+        self.out_bad1 = io.open(options['output'] + '-bad-s', 'w')
+        self.out_bad2 = io.open(options['output'] + '-bad-t', 'w')
 
       if options['srctotarget']:
         for f in options['srctotarget']:
           try:
-            self.srctotarget.append(open(f, 'rU'))
+            self.srctotarget.append(io.open(f, 'rU'))
           except:
             if isinstance(f, io.TextIOBase):
               self.srctotarget.append(f)
@@ -294,7 +294,7 @@ class Aligner:
       if options['targettosrc']:
         for f in options['targettosrc']:
           try:
-            self.targettosrc.append(open(f, 'rU'))
+            self.targettosrc.append(io.open(f, 'rU'))
           except:
             if isinstance(f, io.TextIOBase):
               self.targettosrc.append(f)

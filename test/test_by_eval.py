@@ -85,11 +85,11 @@ class TestByEval(unittest.TestCase):
 		for result_path, refer_path, output_object in compare_files:
 			self.cmp_files(result_path, refer_path, output_object)
 	def cmp_files(self, result, refer, output_object):
-		refer_file = open(refer)
+		refer_file = io.open(refer)
 		refer_data = refer_file.read()
 		refer_file.close()
 		try:
-			result_file = open(result)
+			result_file = io.open(result)
 			result_data = result_file.read()
 			result_file.close()
 		except:
@@ -108,14 +108,14 @@ class TestByEval(unittest.TestCase):
 		options = self.fileNameOptions(
 			eval_type, srctotarget_file, targettosrc_file, output_file)
 		for attr in 'srcfile', 'targetfile':
-			options[attr] = open(options[attr])
+			options[attr] = io.open(options[attr])
 		for attr in 'srctotarget', 'targettosrc':
 			fileArray = []
 			for fileName in options[attr]:
 				fileArray.append(fileName)
 			options[attr] = fileArray
 		for attr in 'output-src', 'output-target':
-			options[attr] = open(options[attr], 'w')
+			options[attr] = io.open(options[attr], 'w')
 		return options
 	def stringIoOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
@@ -124,11 +124,11 @@ class TestByEval(unittest.TestCase):
 		options.pop('output-src')
 		options.pop('output-target')
 		for attr in 'srcfile', 'targetfile':
-			options[attr] = io.StringIO(open(options[attr]).read())
+			options[attr] = io.StringIO(io.open(options[attr]).read())
 		for attr in 'srctotarget', 'targettosrc':
 			ioArray = []
 			for fileName in options[attr]:
-				ioArray.append(io.StringIO(open(fileName).read()))
+				ioArray.append(io.StringIO(io.open(fileName).read()))
 			options[attr] = ioArray
 		return options
 	def stringOptions(self, eval_type,
@@ -138,11 +138,11 @@ class TestByEval(unittest.TestCase):
 		options.pop('output-src')
 		options.pop('output-target')
 		for attr in 'srcfile', 'targetfile':
-			options[attr] = list(open(options[attr]))
+			options[attr] = list(io.open(options[attr]))
 		for attr in 'srctotarget', 'targettosrc':
 			strArray = []
 			for fileName in options[attr]:
-				strArray.append(list(open(fileName)))
+				strArray.append(list(io.open(fileName)))
 			options[attr] = strArray
 		return options
 	def fileInStringOutOptions(self, eval_type,
