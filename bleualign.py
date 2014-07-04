@@ -242,10 +242,16 @@ class Aligner:
       self.srctotarget, self.targettosrc, self.sources_out,self.targets_out = [],[],[],[]
       self.options = options
       self.bleualign = []
+      self.close_src, self.close_target = False, False
+      self.close_out1, self.close_out2 = False, False
+#       always close out_bad 
+#       self.close_out_bad1, self.close_out2 = False, False 
+      self.close_srctotarget, self.close_targettosrc = [], []
       
       if options['srcfile']:
         try:
-          self.src = io.open(options['srcfile'], 'rU')
+          self.src = io.open(options['srcfile'], 'r')
+          self.close_src = True
         except:
           if isinstance(options['srcfile'], io.TextIOBase):
             self.src = options['srcfile']
@@ -253,7 +259,8 @@ class Aligner:
             self.src = io.StringIO('\n'.join(options['srcfile']))
       if options['targetfile']:
         try:
-          self.target = io.open(options['targetfile'], 'rU')
+          self.target = io.open(options['targetfile'], 'r')
+          self.close_target = True
         except:
           if isinstance(options['targetfile'], io.TextIOBase):
             self.target = options['targetfile']
@@ -263,6 +270,7 @@ class Aligner:
       if 'output-src' in options:
         try:
           self.out1 = io.open(options['output-src'], 'w')
+          self.close_out1 = True
         except:
           self.out1 = options['output-src']
       elif options['output']:
@@ -272,6 +280,7 @@ class Aligner:
       if 'output-target' in options:
         try:
           self.out2 = io.open(options['output-target'], 'w')
+          self.close_out2 = True
         except:
           self.out2 = options['output-target']
       elif options['output']:
@@ -286,21 +295,25 @@ class Aligner:
       if options['srctotarget']:
         for f in options['srctotarget']:
           try:
-            self.srctotarget.append(io.open(f, 'rU'))
+            self.srctotarget.append(io.open(f, 'r'))
+            self.close_srctotarget.append(True)
           except:
             if isinstance(f, io.TextIOBase):
               self.srctotarget.append(f)
             else:
               self.srctotarget.append(io.StringIO('\n'.join(f)))
+            self.close_srctotarget.append(False)
       if options['targettosrc']:
         for f in options['targettosrc']:
           try:
-            self.targettosrc.append(io.open(f, 'rU'))
+            self.targettosrc.append(io.open(f, 'r'))
+            self.close_targettosrc.append(True)
           except:
             if isinstance(f, io.TextIOBase):
               self.targettosrc.append(f)
             else:
               self.targettosrc.append(io.StringIO('\n'.join(f)))
+            self.close_targettosrc.append(False)
 
     #takes care of multiprocessing; calls process() function for each article
     def mainloop(self):
@@ -1156,6 +1169,28 @@ class Aligner:
             self.out1.write(line + '\n')
             self.out2.write(self.targets_out[i] + '\n')
 
+    #close all files opened by __init__
+    def close_file_streams(self):
+        if self.close_src:
+            self.src.close()
+        if self.close_target:
+            self.target.close()
+        if self.close_out1:
+            self.out1.close()
+        if self.close_out2:
+            self.out2.close()
+        if self.out_bad1:
+            self.out_bad1.close()
+        if self.out_bad2:
+            self.out_bad2.close()
+        for should_be_closed,output_stream\
+                in zip(self.srctotarget,self.close_srctotarget):
+            if should_be_closed:
+                output_stream.close()
+        for should_be_closed,output_stream\
+                in zip(self.targettosrc,self.close_targettosrc):
+            if should_be_closed:
+                output_stream.close()
 
 #Allows parallelizing of alignment
 if multiprocessing_enabled:
