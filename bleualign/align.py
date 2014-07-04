@@ -11,9 +11,10 @@ import getopt
 import time
 import math
 from operator import itemgetter
-import gale_church
-import score as bleu
-from utils import evaluate, finalevaluation
+import bleualign.gale_church
+from bleualign.gale_church import align_texts
+import bleualign.score as bleu
+from bleualign.utils import evaluate, finalevaluation
 import io
 
 
@@ -852,7 +853,7 @@ class Aligner:
       targetlengths = [[len(i[1].strip()) for i in temptargetgap]]
       
       #call gale & church algorithm
-      pairs = sorted(list((gale_church.align_texts(srclengths, targetlengths)[0])), key=itemgetter(0))
+      pairs = sorted(list((align_texts(srclengths, targetlengths)[0])), key=itemgetter(0))
 
       idict = {}
       jdict = {}

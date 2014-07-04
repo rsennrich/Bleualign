@@ -21,10 +21,10 @@ def evaluate(article, options, testalign):
     gold1990map = {0:9,1:15,2:3,3:6,4:13,5:17,6:19}
     
     if options['eval'] == 1957:
-        from eval import golddev
+        from bleualign.eval import golddev
         goldalign = golddev.goldalign
     elif options['eval'] == 1990:
-        from eval import goldeval
+        from bleualign.eval import goldeval
         goldalign = goldeval.gold[gold1990map[article]]
     
     goldalign = [(tuple(src),tuple(target)) for src,target in goldalign]
