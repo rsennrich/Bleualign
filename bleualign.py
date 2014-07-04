@@ -14,6 +14,7 @@ from operator import itemgetter
 import gale_church
 import score as bleu
 from utils import evaluate, finalevaluation
+import io
 
 
 if sys.version_info >= (2,6):
@@ -110,17 +111,18 @@ def load_arguments(sysargv):
     bold = "\033[1m"
     reset = "\033[0;0m"
 
+    project_path = os.path.dirname(os.path.abspath(__file__))
     for o, a in opts:
         if o in ("-h", "--help"):
             usage()
             sys.exit()
         elif o in ("-e", "--eval"):
-            options['srcfile'] = os.path.join(sys.path[0],'eval','eval1989.de')
-            options['targetfile'] = os.path.join(sys.path[0],'eval','eval1989.fr')
+            options['srcfile'] = os.path.join(project_path,'eval','eval1989.de')
+            options['targetfile'] = os.path.join(project_path,'eval','eval1989.fr')
             options['eval'] = 1990
         elif o in ("-d", "--deveval"):
-            options['srcfile'] = os.path.join(sys.path[0],'eval','eval1957.de')
-            options['targetfile'] = os.path.join(sys.path[0],'eval','eval1957.fr')
+            options['srcfile'] = os.path.join(project_path,'eval','eval1957.de')
+            options['targetfile'] = os.path.join(project_path,'eval','eval1957.fr')
             options['eval'] = 1957
         elif o in ("-o", "--output"):
             options['output'] = a
@@ -242,29 +244,63 @@ class Aligner:
       self.bleualign = []
       
       if options['srcfile']:
-        self.src = open(options['srcfile'],'rU')
+        try:
+          self.src = io.open(options['srcfile'], 'rU')
+        except:
+          if isinstance(options['srcfile'], io.TextIOBase):
+            self.src = options['srcfile']
+          else:
+            self.src = io.StringIO('\n'.join(options['srcfile']))
       if options['targetfile']:
-        self.target = open(options['targetfile'],'rU')
+        try:
+          self.target = io.open(options['targetfile'], 'rU')
+        except:
+          if isinstance(options['targetfile'], io.TextIOBase):
+            self.target = options['targetfile']
+          else:
+            self.target = io.StringIO('\n'.join(options['targetfile']))
 
       if 'output-src' in options:
-        self.out1 = open(options['output-src'],'w')
+        try:
+          self.out1 = io.open(options['output-src'], 'w')
+        except:
+          self.out1 = options['output-src']
       elif options['output']:
-        self.out1 = open(options['output'] + '-s','w')
+        self.out1 = io.open(options['output'] + '-s', 'w')
+      else:
+        self.out1 = io.StringIO()
       if 'output-target' in options:
-        self.out2 = open(options['output-target'],'w')
+        try:
+          self.out2 = io.open(options['output-target'], 'w')
+        except:
+          self.out2 = options['output-target']
       elif options['output']:
-        self.out2 = open(options['output'] + '-t','w')
+        self.out2 = io.open(options['output'] + '-t', 'w')
+      else:
+        self.out2 = io.StringIO()
+
       if options['output'] and options['filter']:
-        self.out_bad1 = open(options['output'] + '-bad-s','w')
-        self.out_bad2 = open(options['output'] + '-bad-t','w')
+        self.out_bad1 = io.open(options['output'] + '-bad-s', 'w')
+        self.out_bad2 = io.open(options['output'] + '-bad-t', 'w')
 
       if options['srctotarget']:
         for f in options['srctotarget']:
-          self.srctotarget.append(open(f,'rU'))
+          try:
+            self.srctotarget.append(io.open(f, 'rU'))
+          except:
+            if isinstance(f, io.TextIOBase):
+              self.srctotarget.append(f)
+            else:
+              self.srctotarget.append(io.StringIO('\n'.join(f)))
       if options['targettosrc']:
         for f in options['targettosrc']:
-          self.targettosrc.append(open(f,'rU'))
-
+          try:
+            self.targettosrc.append(io.open(f, 'rU'))
+          except:
+            if isinstance(f, io.TextIOBase):
+              self.targettosrc.append(f)
+            else:
+              self.targettosrc.append(io.StringIO('\n'.join(f)))
 
     #takes care of multiprocessing; calls process() function for each article
     def mainloop(self):
@@ -347,12 +383,18 @@ class Aligner:
             print('evaluation ' + str(i))
             results[i] = evaluate(i, self.options, self.multialign)
 
+      if self.out1:
+        self.out1.flush()
+      if self.out2:
+        self.out2.flush()
+
       if self.options['eval']:
         finalevaluation(results)
 
       if self.options['filter']:
         self.write_filtered()
 
+      return self.out1,self.out2
 
     #Start different alignment runs depending on which and how many translations are sent to program; intersect results.
     def process(self,sourcelist,targetlist,translist1,translist2):
