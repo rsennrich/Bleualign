@@ -34,7 +34,7 @@ class TestByEval(unittest.TestCase):
 
 	def main_test(self, option_function):
 		test_dir = os.path.dirname(os.path.abspath(__file__))
-		eval_dir = os.path.join(test_dir, '..', 'eval')
+		eval_dir = os.path.join(test_dir, '..', 'bleualign', 'eval')
 		result_dir = os.path.join(test_dir, 'result')
 		refer_dir = os.path.join(test_dir, 'refer')
 		align.log = lambda a, b:None

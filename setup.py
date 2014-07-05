@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
 from distutils.core import setup
-from setuptools import find_packages
 
 def read_file(filename):
 	return open(os.path.join(os.path.dirname(__file__), filename)).read()
@@ -39,6 +38,6 @@ setup(
 		'Topic :: Text Processing',
 		'Topic :: Text Processing :: Linguistic',
 	],
-	packages = find_packages(),
-	package_data = {'': ['eval/ev*', 'test/refer/*', 'test/result/.keep']},
+	packages = ['bleualign'],
+	package_data = {'': ['eval/ev*', ]},
 )
