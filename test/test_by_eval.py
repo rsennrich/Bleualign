@@ -1,10 +1,10 @@
 
 import unittest
-from bleualign import Aligner, load_arguments
 import os
 import itertools
-import bleualign
 import io
+from bleualign.align import Aligner, load_arguments
+from bleualign import align
 
 class TestByEval(unittest.TestCase):
 	def setUp(self):
@@ -34,10 +34,10 @@ class TestByEval(unittest.TestCase):
 
 	def main_test(self, option_function):
 		test_dir = os.path.dirname(os.path.abspath(__file__))
-		eval_dir = os.path.join(test_dir, '..', 'eval')
+		eval_dir = os.path.join(test_dir, '..', 'bleualign', 'eval')
 		result_dir = os.path.join(test_dir, 'result')
 		refer_dir = os.path.join(test_dir, 'refer')
-		bleualign.log = lambda a, b:None
+		align.log = lambda a, b:None
 		compare_files = []
 		for test_set, test_argument in [('eval1957', '-d'), ('eval1989', '-e')]:
 			fr_text = []

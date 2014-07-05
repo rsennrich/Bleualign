@@ -15,7 +15,7 @@
 
 import sys
 import os
-import bleualign
+import bleualign.align
 
 if len(sys.argv) < 5:
     sys.stderr.write('Usage: python batch_align directory source_suffix target_suffix translation_suffix')
