@@ -105,66 +105,76 @@ def tasks_producer(tasks,num_tasks,data):
     num_tasks.value -= 1 # only if this point is reached, process finishes when all tasks are done.
 
 class Aligner:
-
+    default_options = {
+	    'srcfile':None, 'targetfile': None, 'factored': False,
+    	'srctotarget': [], 'targettosrc': [] ,
+    	'galechurch': None,
+    	'filter': None, 'filterthreshold': 90, 'filterlang': None,
+    	'printempty': False,
+        'output': None, 'output-src': None, 'output-target': None,
+    	'eval': None,
+    	'verbosity': 1,
+    	}
     def __init__(self,options):
       self.src, self.target = None,None
       self.out1, self.out2, self.out_bad1, self.out_bad2 = None,None,None,None
       self.finalbleu = []
       self.srctotarget, self.targettosrc, self.sources_out,self.targets_out = [],[],[],[]
-      self.options = options
       self.bleualign = []
       self.close_src, self.close_target = False, False
       self.close_out1, self.close_out2 = False, False
+      self.options = self.default_options
+      self.options.update(options)
 #       always close out_bad 
 #       self.close_out_bad1, self.close_out2 = False, False 
       self.close_srctotarget, self.close_targettosrc = [], []
       
-      if options['srcfile']:
+      if self.options['srcfile']:
         try:
-          self.src = io.open(options['srcfile'], 'r')
+          self.src = io.open(self.options['srcfile'], 'r')
           self.close_src = True
         except:
-          if isinstance(options['srcfile'], io.TextIOBase):
-            self.src = options['srcfile']
+          if isinstance(self.options['srcfile'], io.TextIOBase):
+            self.src = self.options['srcfile']
           else:
-            self.src = io.StringIO('\n'.join(options['srcfile']))
-      if options['targetfile']:
+            self.src = self._stringArray2stringIo(self.options['srcfile'])
+      if self.options['targetfile']:
         try:
-          self.target = io.open(options['targetfile'], 'r')
+          self.target = io.open(self.options['targetfile'], 'r')
           self.close_target = True
         except:
-          if isinstance(options['targetfile'], io.TextIOBase):
-            self.target = options['targetfile']
+          if isinstance(self.options['targetfile'], io.TextIOBase):
+            self.target = self.options['targetfile']
           else:
-            self.target = io.StringIO('\n'.join(options['targetfile']))
+            self.target = self._stringArray2stringIo(self.options['targetfile'])
 
-      if 'output-src' in options:
+      if self.options['output-src']:
         try:
-          self.out1 = io.open(options['output-src'], 'w')
+          self.out1 = io.open(self.options['output-src'], 'w')
           self.close_out1 = True
         except:
-          self.out1 = options['output-src']
-      elif options['output']:
-        self.out1 = io.open(options['output'] + '-s', 'w')
+          self.out1 = self.options['output-src']
+      elif self.options['output']:
+        self.out1 = io.open(self.options['output'] + '-s', 'w')
       else:
         self.out1 = io.StringIO()
-      if 'output-target' in options:
+      if self.options['output-target']:
         try:
-          self.out2 = io.open(options['output-target'], 'w')
+          self.out2 = io.open(self.options['output-target'], 'w')
           self.close_out2 = True
         except:
-          self.out2 = options['output-target']
-      elif options['output']:
-        self.out2 = io.open(options['output'] + '-t', 'w')
+          self.out2 = self.options['output-target']
+      elif self.options['output']:
+        self.out2 = io.open(self.options['output'] + '-t', 'w')
       else:
         self.out2 = io.StringIO()
 
-      if options['output'] and options['filter']:
-        self.out_bad1 = io.open(options['output'] + '-bad-s', 'w')
-        self.out_bad2 = io.open(options['output'] + '-bad-t', 'w')
+      if self.options['output'] and self.options['filter']:
+        self.out_bad1 = io.open(self.options['output'] + '-bad-s', 'w')
+        self.out_bad2 = io.open(self.options['output'] + '-bad-t', 'w')
 
-      if options['srctotarget']:
-        for f in options['srctotarget']:
+      if self.options['srctotarget']:
+        for f in self.options['srctotarget']:
           try:
             self.srctotarget.append(io.open(f, 'r'))
             self.close_srctotarget.append(True)
@@ -172,10 +182,10 @@ class Aligner:
             if isinstance(f, io.TextIOBase):
               self.srctotarget.append(f)
             else:
-              self.srctotarget.append(io.StringIO('\n'.join(f)))
+              self.srctotarget.append(self._stringArray2stringIo(f))
             self.close_srctotarget.append(False)
-      if options['targettosrc']:
-        for f in options['targettosrc']:
+      if self.options['targettosrc']:
+        for f in self.options['targettosrc']:
           try:
             self.targettosrc.append(io.open(f, 'r'))
             self.close_targettosrc.append(True)
@@ -183,8 +193,12 @@ class Aligner:
             if isinstance(f, io.TextIOBase):
               self.targettosrc.append(f)
             else:
-              self.targettosrc.append(io.StringIO('\n'.join(f)))
+              self.targettosrc.append(self._stringArray2stringIo(f))
             self.close_targettosrc.append(False)
+
+    # for passing by string array
+    def _stringArray2stringIo(self, stringArray):
+        return io.StringIO('\n'.join([line.rstrip() for line in stringArray]))
 
     #takes care of multiprocessing; calls process() function for each article
     def mainloop(self):

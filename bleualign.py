@@ -58,17 +58,8 @@ def load_arguments(sysargv):
     options['srcfile'] = None
     options['targetfile'] = None
     options['output'] = None
-    options['factored'] = False
-    options['filter'] = None
-    options['filterthreshold'] = 90
-    options['filterlang'] = None
     options['srctotarget'] = []
-    options['targettosrc'] = [] 
-    options['eval'] = None
-    options['galechurch'] = None
-    options['verbosity'] = 1
-    options['printempty'] = False
-
+    options['targettosrc'] = []
     bold = "\033[1m"
     reset = "\033[0;0m"
 
