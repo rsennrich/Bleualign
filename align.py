@@ -905,13 +905,13 @@ class Aligner:
             targets.append(' '.join([targetlist[ID] for ID in target]))
 
         if self.options['filter'] == 'sentences':
-            self.check_sentence_pair(j, options, sources[-1], translations[-1], targets[-1], sources_output[-1], targets_output[-1], sentscores)
+            self.check_sentence_pair(j, self.options, sources[-1], translations[-1], targets[-1], sources_output[-1], targets_output[-1], sentscores)
 
       if self.options['filter'] == 'sentences':
               self.filter_sentence_pairs(sentscores, sources_output, targets_output)
 
       if self.options['filter'] == 'articles':
-        self.filter_article_pairs(options, sources, translations, targets, sources_output, targets_output)
+        self.filter_article_pairs(self.options, sources, translations, targets, sources_output, targets_output)
 
       self.log("\nfinished with article",1)
       self.log("\n====================\n",1)
@@ -1008,7 +1008,7 @@ class Aligner:
       averagescore = totalscore/totallength
       self.log("The average BLEU score is: " + str(averagescore),1)
       
-      goodlength = totallength*options['filterthreshold']/float(100)
+      goodlength = totallength*self.options['filterthreshold']/float(100)
       totallength = 0
       
       bad_percentiles = []
