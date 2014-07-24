@@ -15,7 +15,7 @@
 
 import sys
 import os
-import bleualign
+from align import Aligner
 
 if len(sys.argv) < 5:
     sys.stderr.write('Usage: python batch_align directory source_suffix target_suffix translation_suffix')
@@ -62,5 +62,5 @@ for (source_document,target_document,translation_document) in jobs:
     options['output-src'] = source_document + '.aligned'
     options['output-target'] = target_document + '.aligned'
 
-    a = bleualign.Aligner(options)
+    a = Aligner(options)
     a.mainloop()

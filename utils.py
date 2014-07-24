@@ -13,20 +13,11 @@ from operator import itemgetter
 
 loglevel = 1
 
-def evaluate(article, options, testalign):
+def evaluate(options, testalign, goldalign):
     global loglevel
     if 'loglevel' in options:
         loglevel = options['loglevel']
-    
-    gold1990map = {0:9,1:15,2:3,3:6,4:13,5:17,6:19}
-    
-    if options['eval'] == 1957:
-        from eval import golddev
-        goldalign = golddev.goldalign
-    elif options['eval'] == 1990:
-        from eval import goldeval
-        goldalign = goldeval.gold[gold1990map[article]]
-    
+        
     goldalign = [(tuple(src),tuple(target)) for src,target in goldalign]
     
     results = {}
