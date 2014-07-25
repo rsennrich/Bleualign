@@ -1,11 +1,11 @@
 
 import unittest
-from bleualign import load_arguments
+from command_utils import load_arguments
 import os
 import itertools
 import bleualign
 import io
-from align import Aligner
+from bleualign.align import Aligner
 
 class TestByEval(unittest.TestCase):
 	def setUp(self):
