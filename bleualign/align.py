@@ -75,10 +75,21 @@ def tasks_producer(tasks,num_tasks,data):
 
 class Aligner:
     default_options = {
-        'srcfile':None, 'targetfile': None, 'factored': False,
-        'srctotarget': [], 'targettosrc': [] ,
+        #source and target files needed by Aligner
+        #they can be filenames, arrays of strings or io objects.
+        'srcfile':None, 'targetfile': None,
+
+        #the format of srcfile and targetfile
+        #False for normal text, True for 'text | other information', seprating by '|'
+        'factored': False,
+
+        #translations of srcfile and targetfile, not influenced by 'factored'
+        #they can be filenames, arrays of strings or io objects, too.
+        'srctotarget': [], 'targettosrc': [],
+        
         #only consider target sentences for bleu-based alignment that are among top N alternatives for a given source sentence
         'maxalternatives':3,
+        
         #bleu scoring algorithm works with 4-grams by default. We got better results when using 2-grams (since there are less 0 scores then)
         'bleu_ngrams' : 2,
 
@@ -86,6 +97,8 @@ class Aligner:
         #also, there are potential precision issues.
         #set to 1 to disable bleu-based 1 to N alignments and let gale & church fill the gaps
         'Nto1' : 2,
+        
+        #do only gale-church, no bleualign
         'galechurch': None,
 
         #gapfillheuristics: what to do with sentences that aren't aligned one-to-one by the first BLEU pass, nor have a 1 to N alignment validated by BLEU?
@@ -97,12 +110,26 @@ class Aligner:
         #string needs to be on a line of its own (see examples in eval directory)
         #must be reliable (article i in the source text needs to correspond to article i in the target text)
         'end_of_article_marker' : ".EOA",
+
+        #filtering good and bad alignemts by bleuscore
+        #filter has sentences or articles type
+        #filterthreshold means choices the higher percentage of alignment
+        #set filterlang True, whose when you want to filter alignemts which src is similar to target than translation
         'filter': None, 'filterthreshold': 90, 'filterlang': None,
+        
+        #it will print unalignemt pair(zero to one or one to zero pair)
         'printempty': False,
-        'output': None, 'output-src': None, 'output-target': None,
+        
+        #setting output for four output filenames, it will add suffixes automatically
+        #or passing filenames or io object for them in respectly.
+        #if not passing anything or assigning None, they will use StringIO to save results.
+        'output': None,
+		'output-src': None, 'output-target': None,
+        'output-src-bad': None, 'output-target-bad': None,
+        #the best alignment of corpus for evaluation
         'eval': None,
         #defines amount of debugging output.
-        'verbosity': 1,
+        'verbosity': 1, 'log_to':sys.stdout,
         }
     def __init__(self,options):
       self.src, self.target = None,None
@@ -114,80 +141,72 @@ class Aligner:
       self.close_src, self.close_target = False, False
       self.close_srctotarget, self.close_targettosrc = [], []
       self.close_out1, self.close_out2 = False, False
-      self.close_out_bad1, self.close_out2 = False, False 
-      self.options = self.default_options
+      self.close_out_bad1, self.close_out_bad2 = False, False 
+      self.options = self.default_options.copy()
       self.options.update(options)
       
       if self.options['srcfile']:
-        try:
-          self.src = io.open(self.options['srcfile'], 'r')
-          self.close_src = True
-        except:
-          if isinstance(self.options['srcfile'], io.TextIOBase):
-            self.src = self.options['srcfile']
-          else:
-            self.src = self._stringArray2stringIo(self.options['srcfile'])
+        self.src, self.close_src = \
+            self._inputObjectFromParameter(self.options['srcfile'])
       if self.options['targetfile']:
-        try:
-          self.target = io.open(self.options['targetfile'], 'r')
-          self.close_target = True
-        except:
-          if isinstance(self.options['targetfile'], io.TextIOBase):
-            self.target = self.options['targetfile']
-          else:
-            self.target = self._stringArray2stringIo(self.options['targetfile'])
-
-      if self.options['output-src']:
-        try:
-          self.out1 = io.open(self.options['output-src'], 'w')
-          self.close_out1 = True
-        except:
-          self.out1 = self.options['output-src']
-      elif self.options['output']:
-        self.out1 = io.open(self.options['output'] + '-s', 'w')
-      else:
-        self.out1 = io.StringIO()
-      if self.options['output-target']:
-        try:
-          self.out2 = io.open(self.options['output-target'], 'w')
-          self.close_out2 = True
-        except:
-          self.out2 = self.options['output-target']
-      elif self.options['output']:
-        self.out2 = io.open(self.options['output'] + '-t', 'w')
-      else:
-        self.out2 = io.StringIO()
-
-      if self.options['output'] and self.options['filter']:
-        self.out_bad1 = io.open(self.options['output'] + '-bad-s', 'w')
-        self.out_bad2 = io.open(self.options['output'] + '-bad-t', 'w')
+        self.target, self.close_target = \
+            self._inputObjectFromParameter(self.options['targetfile'])
 
       if self.options['srctotarget']:
         for f in self.options['srctotarget']:
-          try:
-            self.srctotarget.append(io.open(f, 'r'))
-            self.close_srctotarget.append(True)
-          except:
-            if isinstance(f, io.TextIOBase):
-              self.srctotarget.append(f)
-            else:
-              self.srctotarget.append(self._stringArray2stringIo(f))
-            self.close_srctotarget.append(False)
+            obj, close_obj = \
+                self._inputObjectFromParameter(f)
+            self.srctotarget.append(obj)
+            self.close_srctotarget.append(close_obj)
       if self.options['targettosrc']:
         for f in self.options['targettosrc']:
-          try:
-            self.targettosrc.append(io.open(f, 'r'))
-            self.close_targettosrc.append(True)
-          except:
-            if isinstance(f, io.TextIOBase):
-              self.targettosrc.append(f)
-            else:
-              self.targettosrc.append(self._stringArray2stringIo(f))
-            self.close_targettosrc.append(False)
+            obj, close_obj = \
+                self._inputObjectFromParameter(f)
+            self.targettosrc.append(obj)
+            self.close_targettosrc.append(close_obj)
+
+      self.out1,self.close_out1=self._outputObjectFromParameter(
+			self.options['output-src'], self.options['output'], '-s')
+      self.out2,self.close_out2=self._outputObjectFromParameter(
+ 			self.options['output-target'], self.options['output'], '-t')
+
+      if self.options['filter']:
+        self.out_bad1,self.close_out_bad1=self._outputObjectFromParameter(
+            self.options['output-src-bad'], self.options['output'], '-bad-s')
+        self.out_bad2,self.close_out_bad2=self._outputObjectFromParameter(
+            self.options['output-target-bad'], self.options['output'], '-bad-t')
 
     # for passing by string array
     def _stringArray2stringIo(self, stringArray):
         return io.StringIO('\n'.join([line.rstrip() for line in stringArray]))
+
+    # parameter may be filename, IO object or string array
+    def _inputObjectFromParameter(self, parameter):
+        try:
+            inputObject = io.open(parameter, 'r')
+            close_object = True
+        except:
+            if isinstance(parameter, io.TextIOBase):
+                inputObject = parameter
+            else:
+                inputObject = self._stringArray2stringIo(parameter)
+            close_object = False
+        return inputObject, close_object
+ 
+    # parameter may be filename, IO object or string array
+    def _outputObjectFromParameter(self, parameter, filename, suffix):
+        close_object = False
+        if parameter:
+            try:
+                outputObject = io.open(parameter, 'w')
+                close_object = True
+            except:
+                outputObject = parameter
+        elif filename:
+            outputObject = io.open(filename + suffix, 'w')
+        else:
+            outputObject = io.StringIO()
+        return outputObject, close_object
 
     #takes care of multiprocessing; calls process() function for each article
     def mainloop(self):
@@ -247,7 +266,7 @@ class Aligner:
             self.printout(sourcelist, translist, targetlist)
 
             if self.options['eval']:
-                print('evaluation ' + str(i))
+                self.log('evaluation ' + str(i))
                 results[i] = evaluate(self.options,self.multialign,self.options['eval'][i])
             
             del(scores[i])
@@ -267,7 +286,7 @@ class Aligner:
                 translist = sourcelist
           self.printout(sourcelist, translist, targetlist)
           if self.options['eval']:
-            print('evaluation ' + str(i))
+            self.log('evaluation ' + str(i))
             results[i] = evaluate(self.options, self.multialign,self.options['eval'][i])
 
       if self.out1:
@@ -281,7 +300,17 @@ class Aligner:
       if self.options['filter']:
         self.write_filtered()
 
+      self.close_file_streams()
+
       return self.out1,self.out2
+
+    #results of alignment or good aligment if filtering
+    def results(self):
+        return self.out1,self.out2
+       
+    #bad aligment for filtering. Otherwise, None
+    def results_bad(self):
+        return self.out_bad1,self.out_bad2
 
     #Start different alignment runs depending on which and how many translations are sent to program; intersect results.
     def process(self,sourcelist,targetlist,translist1,translist2):
@@ -837,14 +866,14 @@ class Aligner:
             bleualignsrc = list(map(itemgetter(0),self.bleualign))
             for sourceid in range(source_len):
                 if sourceid in bleualignsrc:
-                    print('\033[92m' + str(sourceid) + ": ", end='')
-                    print(str(self.bleualign[bleualignsrc.index(sourceid)][1]) + '\033[1;m')
+                    self.log('\033[92m' + str(sourceid) + ": "
+					    + str(self.bleualign[bleualignsrc.index(sourceid)][1]) + '\033[1;m')
                 else:
-                    print('\033[1;31m'+str(sourceid) + ": unaligned. best cand ", end='')
                     bestcand = self.scoredict.get(sourceid,[])
                     if bestcand:
                         bestcand = bestcand[0][1]
-                    print(str(bestcand)+'\033[1;m')
+                    self.log('\033[1;31m'+str(sourceid) + ": unaligned. best cand "
+                        + str(bestcand)+'\033[1;m')
 
         if source_len and target_len:
             self.log("\n" + str(len(self.bleualign)) + ' out of ' + str(source_len) + ' source sentences aligned by BLEU ' + str(100*len(self.bleualign)/float(source_len)) + '%',2)
@@ -885,9 +914,6 @@ class Aligner:
                 targets.extend([targetlist[ID] for ID in range(lasttarget+1,target[0])])
                 translations.extend(['' for ID in range(lasttarget+1,target[0])])
 
-
-
-
         lastsrc = src[-1]
         lasttarget = target[-1]
 
@@ -903,13 +929,13 @@ class Aligner:
             targets.append(' '.join([targetlist[ID] for ID in target]))
 
         if self.options['filter'] == 'sentences':
-            self.check_sentence_pair(j, self.options, sources[-1], translations[-1], targets[-1], sources_output[-1], targets_output[-1], sentscores)
+            self.check_sentence_pair(j, sources[-1], translations[-1], targets[-1], sources_output[-1], targets_output[-1], sentscores)
 
       if self.options['filter'] == 'sentences':
               self.filter_sentence_pairs(sentscores, sources_output, targets_output)
 
       if self.options['filter'] == 'articles':
-        self.filter_article_pairs(self.options, sources, translations, targets, sources_output, targets_output)
+        self.filter_article_pairs(sources, translations, targets, sources_output, targets_output)
 
       self.log("\nfinished with article",1)
       self.log("\n====================\n",1)
@@ -924,11 +950,11 @@ class Aligner:
 
 
     #get BLEU score of sentence pair (for filtering)
-    def check_sentence_pair(self, j, options, src, trans, target, source_out, target_out, sentscores):
+    def check_sentence_pair(self, j, src, trans, target, source_out, target_out, sentscores):
 
           sentscore = self.score_article([trans],[target])
           sentscore2 = self.score_article([src],[target])
-          if sentscore2 > sentscore and options['filterlang']:
+          if sentscore2 > sentscore and self.options['filterlang']:
             self.out_bad1.write(source_out + '\n')
             self.out_bad2.write(target_out + '\n')
           else:
@@ -965,13 +991,13 @@ class Aligner:
 
 
     # store BLEU score for each article pair (used for filtering at the very end)
-    def filter_article_pairs(self, options, sources, translations, targets, sources_output, targets_output):
+    def filter_article_pairs(self, sources, translations, targets, sources_output, targets_output):
         articlescore = self.score_article(translations,targets)
         articlescore2 = self.score_article(sources,targets)
 
         self.log('\nBLEU score for article: ' + str(articlescore) + ' / ' + str(articlescore2),1)
 
-        if articlescore2 > articlescore and options['filterlang']:
+        if articlescore2 > articlescore and self.options['filterlang']:
             if self.options['factored']:
                 sources,targets = sources_factored,targets_factored
             for i,line in enumerate(sources):
@@ -1053,22 +1079,22 @@ class Aligner:
             self.out1.close()
         if self.close_out2:
             self.out2.close()
-        if self.out_bad1:
+        if self.close_out_bad1:
             self.out_bad1.close()
-        if self.out_bad2:
+        if self.close_out_bad2:
             self.out_bad2.close()
         for should_be_closed,output_stream\
-                in zip(self.srctotarget,self.close_srctotarget):
+                in zip(self.close_srctotarget,self.srctotarget):
             if should_be_closed:
                 output_stream.close()
         for should_be_closed,output_stream\
-                in zip(self.targettosrc,self.close_targettosrc):
+                in zip(self.close_targettosrc,self.targettosrc):
             if should_be_closed:
                 output_stream.close()
 
     def log(self, msg, level = 1):
       if level <= self.options['verbosity']:
-        print(msg)
+        print(msg, file = self.options['log_to'])
 
 
 #Allows parallelizing of alignment

@@ -2,38 +2,31 @@
 import unittest
 from command_utils import load_arguments
 import os
-import itertools
 import bleualign
 import io
 from bleualign.align import Aligner
+from test.utils import Utils
 
-class TestByEval(unittest.TestCase):
+class TestByEval(unittest.TestCase, Utils):
 	def setUp(self):
-		self.options = {}
-		self.options['srcfile'] = None
-		self.options['targetfile'] = None
-		self.options['output'] = None
-		self.options['factored'] = False
-		self.options['filter'] = None
-		self.options['filterthreshold'] = 90
-		self.options['filterlang'] = None
-		self.options['srctotarget'] = []
-		self.options['targettosrc'] = []
-		self.options['eval'] = None
-		self.options['galechurch'] = None
-		self.options['verbosity'] = 1
-		self.options['printempty'] = False
+		pass
 
 	def test_originalFileName(self):
-		self.main_test('fileNameOptions')
+		self.main_test('fileNameOptions', remove_file = 'removeFile')
 	def test_fileObject(self):
-		self.main_test('fileObjectOptions')
+		self.main_test('fileObjectOptions',
+			close_file_object = 'closeAllFiles',
+			remove_file = 'removeFile')
 	def test_stringIo(self):
 		self.main_test('stringIoOptions')
 	def test_string(self):
 		self.main_test('stringOptions')
+	def test_differentTypeOptions(self):
+		self.main_test('differentTypeOptions',
+			remove_file = 'removeTargetFile')
 
-	def main_test(self, option_function):
+	def main_test(self, option_function,
+			close_file_object = None, remove_file = None):
 		test_dir = os.path.dirname(os.path.abspath(__file__))
 		eval_dir = os.path.join(test_dir, '..', 'eval')
 		result_dir = os.path.join(test_dir, 'result')
@@ -55,7 +48,6 @@ class TestByEval(unittest.TestCase):
 								de_text.append(filepath)
 			fr_text.sort()
 			de_text.sort()
-# 			print(fr_text, de_text)
 			test_files = []
 			test_files.append((fr_text[0:1], de_text[-3:-2]))
 			test_files.append((fr_text, []))
@@ -75,27 +67,18 @@ class TestByEval(unittest.TestCase):
 				options = getattr(self, option_function)(test_argument,
 					srctotarget_file, targettosrc_file, output_path)
 				a = Aligner(options)
-				output_src, output_target = a.mainloop()
-# 				time.sleep(5)
-				# compare result with data in refer
+				a.mainloop()
+				output_src, output_target = a.results()
+				if close_file_object != None:
+					getattr(self, close_file_object)(output_src, output_target)
 				refer_path = os.path.join(refer_dir , output_file)
 				compare_files.append((output_path + '-s', refer_path + '-s', output_src))
 				compare_files.append((output_path + '-t', refer_path + '-t', output_target))
-# 				self.cmp_files(output_path + '-s', refer_path + '-s')
-# 				self.cmp_files(output_path + '-t', refer_path + '-t')
+		# compare result with data in refer
 		for result_path, refer_path, output_object in compare_files:
 			self.cmp_files(result_path, refer_path, output_object)
-	def cmp_files(self, result, refer, output_object):
-		refer_file = io.open(refer)
-		refer_data = refer_file.read()
-		refer_file.close()
-		try:
-			result_file = io.open(result)
-			result_data = result_file.read()
-			result_file.close()
-		except:
-			result_data = output_object.getvalue()
-		self.assertEqual(result_data, refer_data, result)
+			if remove_file != None:
+				getattr(self, remove_file)(result_path)
 	def fileNameOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
 		options = load_arguments(['', eval_type])
@@ -103,6 +86,7 @@ class TestByEval(unittest.TestCase):
 		options['targettosrc'] = targettosrc_file
 		options['output-src'] = output_file + '-s'
 		options['output-target'] = output_file + '-t'
+		options['verbosity'] = 0
 		return options
 	def fileObjectOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
@@ -146,26 +130,41 @@ class TestByEval(unittest.TestCase):
 				strArray.append(list(io.open(fileName)))
 			options[attr] = strArray
 		return options
-	def fileInStringOutOptions(self, eval_type,
+	def differentTypeOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
-		options = load_arguments(['', eval_type])
-		options['srctotarget'] = srctotarget_file
-		options['targettosrc'] = targettosrc_file
-		return options, options['output-src'], options['output-target']
-	def output_file_path(self, result_dir, srctotarget_file, targettosrc_file):
-		source_set = set()
-		source_trans = []
-		for filename in itertools.chain.from_iterable(
-				(srctotarget_file, ['..'], targettosrc_file)):
-			filename_set, filename_trans = os.path.basename(filename).split('.')[:2]
-			source_set.add(filename_set)
-			source_trans.append(filename_trans)
-		source_set.discard('')
-		if len(source_set) > 1:
-			raise RuntimeError
-		output_filename = '.'.join(
-			itertools.chain.from_iterable(([source_set.pop()], source_trans)))
-		return output_filename
+		options = self.fileNameOptions(
+			eval_type, srctotarget_file, targettosrc_file, output_file)
+		# file object
+		for attr in 'targetfile', :
+			options[attr] = io.open(options[attr])
+		# stringIO
+		for attr in 'srctotarget', :
+			ioArray = []
+			for fileName in options[attr]:
+				ioArray.append(io.StringIO(io.open(fileName).read()))
+			options[attr] = ioArray
+		# string array
+		for attr in 'targettosrc', :
+			strArray = []
+			for fileName in options[attr]:
+				strArray.append(list(io.open(fileName)))
+			options[attr] = strArray
+		# stringIO
+		options.pop('output-src')
+		# filename: output-target
+		return options
+	def closeAllFiles(self, src, target):
+		src.flush()
+		os.fsync(src.fileno())
+		src.close()
+		target.flush()
+		os.fsync(target.fileno())
+		target.close()
+	def removeFile(self, path):
+		os.remove(path)
+	def removeTargetFile(self, path):
+		if path.endswith('-t'):
+			self.removeFile(path)
 
 if __name__ == '__main__':
 	unittest.main()

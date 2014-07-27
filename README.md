@@ -57,6 +57,25 @@ example: given the directory `raw_files` with the files `0.de`, `0.fr` and `0.tr
 This will produce the files `0.de.aligned` and `0.fr.aligned`
 
 
+SIMPLE IMPORT INSTRUCTIONS
+------------------
+	from bleualign.align import Aligner
+	options={}
+	#source and target files needed by Aligner
+	#they can be filenames, arrays of strings, io objects.
+	options['srcfile'] = source_language_data
+	options['targetfile'] = target_language_data
+	#they can be filenames, arrays of strings, io objects, too.
+	options['srctotarget'] = [data1, data2]
+	a = Aligner(options)
+	a.mainloop()
+	output_src, output_target = a.results()
+	#output_src is StringIO because options['output-src'] is unset
+	output_src.getvalue() #StringIO member function
+	
+See codes in example/ directory and get more.
+If you want to know all options, you can see Aligner.default_options variable in bleualign/aligner.py.
+
 PUBLICATIONS
 ------------
 
