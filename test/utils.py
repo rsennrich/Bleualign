@@ -23,9 +23,9 @@ class Utils():
 		refer_data = refer_file.read()
 		refer_file.close()
 		try:
+			result_data = output_object.getvalue()
+		except:
 			result_file = io.open(result)
 			result_data = result_file.read()
 			result_file.close()
-		except:
-			result_data = output_object.getvalue()
 		self.assertEqual(result_data, refer_data, result)

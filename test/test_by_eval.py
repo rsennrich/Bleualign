@@ -70,7 +70,12 @@ class TestByEval(unittest.TestCase, Utils):
 				a.mainloop()
 				output_src, output_target = a.results()
 				if close_file_object != None:
-					getattr(self, close_file_object)(output_src, output_target)
+					getattr(self, close_file_object)([output_src, output_target])
+					getattr(self, close_file_object)([options['targetfile']])
+					getattr(self, close_file_object)(options['targettosrc'])
+					if option_function == 'fileObjectOptions':
+						getattr(self, close_file_object)([options['srcfile']])
+						getattr(self, close_file_object)(options['srctotarget'])
 				refer_path = os.path.join(refer_dir , output_file)
 				compare_files.append((output_path + '-s', refer_path + '-s', output_src))
 				compare_files.append((output_path + '-t', refer_path + '-t', output_target))
@@ -97,7 +102,7 @@ class TestByEval(unittest.TestCase, Utils):
 		for attr in 'srctotarget', 'targettosrc':
 			fileArray = []
 			for fileName in options[attr]:
-				fileArray.append(fileName)
+				fileArray.append(io.open(fileName))
 			options[attr] = fileArray
 		for attr in 'output-src', 'output-target':
 			options[attr] = io.open(options[attr], 'w')
@@ -109,11 +114,15 @@ class TestByEval(unittest.TestCase, Utils):
 		options.pop('output-src')
 		options.pop('output-target')
 		for attr in 'srcfile', 'targetfile':
-			options[attr] = io.StringIO(io.open(options[attr]).read())
+			f = io.open(options[attr])
+			options[attr] = io.StringIO(f.read())
+			f.close()
 		for attr in 'srctotarget', 'targettosrc':
 			ioArray = []
 			for fileName in options[attr]:
-				ioArray.append(io.StringIO(io.open(fileName).read()))
+				f = io.open(fileName)
+				ioArray.append(io.StringIO(f.read()))
+				f.close()
 			options[attr] = ioArray
 		return options
 	def stringOptions(self, eval_type,
@@ -123,11 +132,15 @@ class TestByEval(unittest.TestCase, Utils):
 		options.pop('output-src')
 		options.pop('output-target')
 		for attr in 'srcfile', 'targetfile':
-			options[attr] = list(io.open(options[attr]))
+			f = io.open(options[attr])
+			options[attr] = list(f)
+			f.close()
 		for attr in 'srctotarget', 'targettosrc':
 			strArray = []
 			for fileName in options[attr]:
-				strArray.append(list(io.open(fileName)))
+				f = io.open(fileName)
+				strArray.append(list(f))
+				f.close()
 			options[attr] = strArray
 		return options
 	def differentTypeOptions(self, eval_type,
@@ -141,25 +154,27 @@ class TestByEval(unittest.TestCase, Utils):
 		for attr in 'srctotarget', :
 			ioArray = []
 			for fileName in options[attr]:
-				ioArray.append(io.StringIO(io.open(fileName).read()))
+				f = io.open(fileName)
+				ioArray.append(io.StringIO(f.read()))
+				f.close()
 			options[attr] = ioArray
 		# string array
 		for attr in 'targettosrc', :
 			strArray = []
 			for fileName in options[attr]:
-				strArray.append(list(io.open(fileName)))
+				f = io.open(fileName)
+				strArray.append(list(f))
+				f.close()
 			options[attr] = strArray
 		# stringIO
 		options.pop('output-src')
 		# filename: output-target
 		return options
-	def closeAllFiles(self, src, target):
-		src.flush()
-		os.fsync(src.fileno())
-		src.close()
-		target.flush()
-		os.fsync(target.fileno())
-		target.close()
+	def closeAllFiles(self, file_list):
+		for file in file_list:
+			file.flush()
+			os.fsync(file.fileno())
+			file.close()
 	def removeFile(self, path):
 		os.remove(path)
 	def removeTargetFile(self, path):
