@@ -41,7 +41,7 @@ class TestByEvalFilter(unittest.TestCase, Utils):
 			fr_text.sort()
 			de_text.sort()
 			test_files = []
-# 			test_files.append((fr_text[0:1], de_text[-3:-2], 'articles'))
+			test_files.append((fr_text[0:1], de_text[-3:-2], 'articles'))
 			test_files.append((fr_text, [], 'sentences'))
 			test_files.append((fr_text, de_text, 'sentences'))
 			for fr_file, de_file, filter_type in test_files:
@@ -55,7 +55,7 @@ class TestByEvalFilter(unittest.TestCase, Utils):
 				a.mainloop()
 				output_src, output_target = a.results()
 				output_src_bad, output_target_bad = a.results_bad()
-				if option_function=='fileObjectOptions':
+				if option_function == 'fileObjectOptions':
 					output_src.close()
 					output_target.close()
 					output_src_bad.close()
@@ -80,7 +80,6 @@ class TestByEvalFilter(unittest.TestCase, Utils):
 		options['output-target-bad'] = output_file + '-bad-t'
 		options['verbosity'] = 0
 		if filter_type == 'articles':
-			raise RuntimeError("@@")
 			options['filterthreshold'] = 50
 		return options
 	def fileObjectOptions(self, eval_type, filter_type,
