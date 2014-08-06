@@ -74,7 +74,6 @@ class TestByEvalFilter(unittest.TestCase, Utils):
 		options = load_arguments(['', eval_type,\
 			'--filter', filter_type,\
 			'--srctotarget', '-'])
-		options['galechurch'] = False
 		options['srctotarget'] = srctotarget_file
 		options['targettosrc'] = targettosrc_file
 		options['output-src'] = output_file + '-good-s'

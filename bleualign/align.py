@@ -150,7 +150,7 @@ class Aligner:
       if not self.options['targetfile']:
         raise ValueError('Target file not specified.')
       if not self.options['srctotarget'] and not self.options['targettosrc']\
-            and not self.options['galechurch']:
+            and not self.options['no_translation_override']:
         raise ValueError("ERROR: no translation available: BLEU scores can be computed between the source and target text, but this is not the intended usage of Bleualign and may result in poor performance! If you're *really* sure that this is what you want, set 'galechurch' for the options.")
 
       self.src, self.close_src = \
@@ -347,7 +347,7 @@ class Aligner:
         phase2.append(self.align(translist, raw_sourcelist))
 
       if not (translist1 or translist2):
-        if self.options['galechurch']:
+        if self.options['no_translation_override'] or self.options['galechurch']:
             phase1 = [self.align(raw_sourcelist, raw_targetlist)]
         else:
             raise RuntimeError("ERROR: no translation available")

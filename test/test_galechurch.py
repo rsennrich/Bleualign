@@ -17,10 +17,9 @@ class TestGaleChurch(unittest.TestCase, Utils):
 		compare_files = []
 		for test_set, test_argument in [('eval1957', '-d'), ('eval1989', '-e')]:
 			options = load_arguments(['', test_argument, '--srctotarget', '-'])
-			options ['galechurch'] = False
 			output_file = test_set + '-galechurch'
 			output_path = os.path.join(result_dir , output_file)
-			options['output'] = output_path
+# 			options['output'] = output_path
 			a = Aligner(options)
 			a.mainloop()
 			output_src, output_target = a.results()
