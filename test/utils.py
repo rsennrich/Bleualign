@@ -4,7 +4,7 @@ import itertools
 import io
 
 class Utils():
-	def output_file_path(self, result_dir, srctotarget_file, targettosrc_file):
+	def output_file_path(self, srctotarget_file, targettosrc_file):
 		source_set = set()
 		source_trans = []
 		for filename in itertools.chain.from_iterable(
