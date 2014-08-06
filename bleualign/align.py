@@ -86,6 +86,8 @@ class Aligner:
         #translations of srcfile and targetfile, not influenced by 'factored'
         #they can be filenames, arrays of strings or io objects, too.
         'srctotarget': [], 'targettosrc': [],
+        #run aligner without srctotarget and targettosrc
+        'no_translation_override':False,
         
         #only consider target sentences for bleu-based alignment that are among top N alternatives for a given source sentence
         'maxalternatives':3,
@@ -124,7 +126,7 @@ class Aligner:
         #or passing filenames or io object for them in respectly.
         #if not passing anything or assigning None, they will use StringIO to save results.
         'output': None,
-		'output-src': None, 'output-target': None,
+        'output-src': None, 'output-target': None,
         'output-src-bad': None, 'output-target-bad': None,
         #the best alignment of corpus for evaluation
         'eval': None,
@@ -170,9 +172,9 @@ class Aligner:
             self.close_targettosrc.append(close_obj)
 
       self.out1,self.close_out1=self._outputObjectFromParameter(
-			self.options['output-src'], self.options['output'], '-s')
+            self.options['output-src'], self.options['output'], '-s')
       self.out2,self.close_out2=self._outputObjectFromParameter(
- 			self.options['output-target'], self.options['output'], '-t')
+            self.options['output-target'], self.options['output'], '-t')
 
       if self.options['filter']:
         self.out_bad1,self.close_out_bad1=self._outputObjectFromParameter(
@@ -248,7 +250,7 @@ class Aligner:
                             for p in scorers:
                                 p.terminate()
                             producer.terminate()
-                            sys.exit(1)
+                            raise RuntimeError("Multiprocessing error")
                     continue
 
             (sourcelist,targetlist,translist1,translist2) = data
@@ -350,7 +352,11 @@ class Aligner:
         if self.options['no_translation_override'] or self.options['galechurch']:
             phase1 = [self.align(raw_sourcelist, raw_targetlist)]
         else:
-            raise RuntimeError("ERROR: no translation available")
+            self.log("ERROR: no translation available", 1)
+            if multiprocessing_enabled:
+                sys.exit(1)
+            else:
+                raise RuntimeError("ERROR: no translation available")
 
       if len(phase1) > 1:
         self.log("intersecting all srctotarget alignments",1)
@@ -870,7 +876,7 @@ class Aligner:
             for sourceid in range(source_len):
                 if sourceid in bleualignsrc:
                     self.log('\033[92m' + str(sourceid) + ": "
-					    + str(self.bleualign[bleualignsrc.index(sourceid)][1]) + '\033[1;m')
+                        + str(self.bleualign[bleualignsrc.index(sourceid)][1]) + '\033[1;m')
                 else:
                     bestcand = self.scoredict.get(sourceid,[])
                     if bestcand:
