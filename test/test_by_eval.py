@@ -86,7 +86,8 @@ class TestByEval(unittest.TestCase, Utils):
 				getattr(self, remove_file)(result_path)
 	def fileNameOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
-		options = load_arguments(['', eval_type])
+		options = load_arguments(['', eval_type, '--srctotarget', '-'])
+		options['galechurch'] = False
 		options['srctotarget'] = srctotarget_file
 		options['targettosrc'] = targettosrc_file
 		options['output-src'] = output_file + '-s'

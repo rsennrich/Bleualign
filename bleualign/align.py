@@ -145,21 +145,25 @@ class Aligner:
       self.options = self.default_options.copy()
       self.options.update(options)
       
-      if self.options['srcfile']:
-        self.src, self.close_src = \
+      if not self.options['srcfile']:
+        raise ValueError('Source file not specified.')
+      if not self.options['targetfile']:
+        raise ValueError('Target file not specified.')
+      if not self.options['srctotarget'] and not self.options['targettosrc']\
+            and not self.options['galechurch']:
+        raise ValueError("ERROR: no translation available: BLEU scores can be computed between the source and target text, but this is not the intended usage of Bleualign and may result in poor performance! If you're *really* sure that this is what you want, set 'galechurch' for the options.")
+
+      self.src, self.close_src = \
             self._inputObjectFromParameter(self.options['srcfile'])
-      if self.options['targetfile']:
-        self.target, self.close_target = \
+      self.target, self.close_target = \
             self._inputObjectFromParameter(self.options['targetfile'])
 
-      if self.options['srctotarget']:
-        for f in self.options['srctotarget']:
+      for f in self.options['srctotarget']:
             obj, close_obj = \
                 self._inputObjectFromParameter(f)
             self.srctotarget.append(obj)
             self.close_srctotarget.append(close_obj)
-      if self.options['targettosrc']:
-        for f in self.options['targettosrc']:
+      for f in self.options['targettosrc']:
             obj, close_obj = \
                 self._inputObjectFromParameter(f)
             self.targettosrc.append(obj)
@@ -343,11 +347,10 @@ class Aligner:
         phase2.append(self.align(translist, raw_sourcelist))
 
       if not (translist1 or translist2):
-        if 'no_translation_override' in self.options or self.options['galechurch']:
+        if self.options['galechurch']:
             phase1 = [self.align(raw_sourcelist, raw_targetlist)]
         else:
-            self.log("ERROR: no translation available: BLEU scores can be computed between the source and target text, but this is not the intended usage of Bleualign and may result in poor performance! If you're *really* sure that this is what you want, use the option '--srctotarget -'", 1)
-            sys.exit(1)
+            raise RuntimeError("ERROR: no translation available")
 
       if len(phase1) > 1:
         self.log("intersecting all srctotarget alignments",1)
