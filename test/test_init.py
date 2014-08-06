@@ -17,7 +17,8 @@ class TestByEval(unittest.TestCase):
 		self.assertRaises(ValueError, Aligner,
 			{'srcfile':self.srcfile, 'targetfile':self.targetfile})
 		a=Aligner(
-			{'srcfile':self.srcfile, 'targetfile':self.targetfile, 'galechurch':True})
+			{'srcfile':self.srcfile, 'targetfile':self.targetfile,
+				'no_translation_override':True})
 		a.close_file_streams()
 		a=Aligner(
 			{'srcfile':self.srcfile, 'targetfile':self.targetfile,
