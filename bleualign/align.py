@@ -267,7 +267,7 @@ class Aligner:
 
             if self.options['eval']:
                 self.log('evaluation ' + str(i))
-                results[i] = evaluate(self.options,self.multialign,self.options['eval'][i])
+                results[i] = evaluate(self.options,self.multialign,self.options['eval'][i],self.log)
             
             del(scores[i])
             i += 1
@@ -287,7 +287,7 @@ class Aligner:
           self.printout(sourcelist, translist, targetlist)
           if self.options['eval']:
             self.log('evaluation ' + str(i))
-            results[i] = evaluate(self.options, self.multialign,self.options['eval'][i])
+            results[i] = evaluate(self.options, self.multialign,self.options['eval'][i],self.log)
 
       if self.out1:
         self.out1.flush()
@@ -295,7 +295,7 @@ class Aligner:
         self.out2.flush()
 
       if self.options['eval']:
-        finalevaluation(results)
+        finalevaluation(results, self.log)
 
       if self.options['filter']:
         self.write_filtered()
@@ -1092,10 +1092,9 @@ class Aligner:
             if should_be_closed:
                 output_stream.close()
 
-    def log(self, msg, level = 1):
+    def log(self, msg, level = 1, end='\n'):
       if level <= self.options['verbosity']:
-        print(msg, file = self.options['log_to'])
-
+        print(msg, end=end, file = self.options['log_to'])
 
 #Allows parallelizing of alignment
 if multiprocessing_enabled:
