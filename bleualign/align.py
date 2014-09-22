@@ -705,7 +705,7 @@ class Aligner:
           #try if concatenating target sentences together improves bleu score (beginning of gap)
           if pregapsrc:
             newscore,newtarget,newcorrect = scoredict[pregapsrc][0]
-            if newtarget != pregaptarget:
+            if newtarget != pregaptarget and newtarget != postgaptarget:
                 #print('\ntarget side: ' + str(newtarget) + ' better than ' + str(pregaptarget))
                 pregap = (pregapsrc,newtarget)
                 for i in newtarget:
@@ -716,7 +716,7 @@ class Aligner:
           #try if concatenating target sentences together improves bleu score (end of gap)
           if postgapsrc:
             newscore,newtarget,newcorrect = scoredict[postgapsrc][0]
-            if newtarget != postgaptarget:
+            if newtarget != postgaptarget and newtarget != pregaptarget:
                 #print('\ntarget side: ' + str(newtarget) + ' better than ' + str(postgaptarget))
                 postgap = (postgapsrc,newtarget)
                 for i in newtarget:
