@@ -7,7 +7,7 @@ def read_file(filename):
 
 setup(
 	name = 'bleualign',
-	version = '0.1.0',
+	version = '0.1.1',
 	description = 'An MT-based sentence alignment tool',
 	long_description = read_file('README.md'),
 	author = 'Rico Sennrich',
