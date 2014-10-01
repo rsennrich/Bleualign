@@ -2,11 +2,12 @@
 import unittest
 import os
 from bleualign.align import Aligner
+import io
 
 class TestS2tAndT2s(unittest.TestCase):
 	def setUp(self):
 		pass
-	def atest_1989googlefr(self):
+	def test_1989googlefr(self):
 		current_path = os.path.dirname(os.path.abspath(__file__))
 		eval1989de = os.path.join(current_path, '..', 'eval', 'eval1989.de')
 		eval1989fr = os.path.join(current_path, '..', 'eval', 'eval1989.fr')
@@ -17,11 +18,11 @@ class TestS2tAndT2s(unittest.TestCase):
 		eval1989de = os.path.join(current_path, '..', 'eval', 'eval1989.de')
 		eval1989fr = os.path.join(current_path, '..', 'eval', 'eval1989.fr')
 		googlefr = os.path.join(current_path, '..', 'eval', 'eval1989.google.fr')
-		with open(eval1989de) as f:
+		with io.open(eval1989de) as f:
 			de_small = f.readlines()[602:625]
-		with open(eval1989fr) as f:
+		with io.open(eval1989fr) as f:
 			fr_small = f.readlines()[608:634]
-		with open(googlefr) as f:
+		with io.open(googlefr) as f:
 			go_small = f.readlines()[602:625]
 		self._sameResultForEval(de_small, fr_small, [go_small], [])
 	def _sameResultForEval(self,de,fr,s2t,t2s):
