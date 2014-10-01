@@ -86,6 +86,8 @@ class Aligner:
         #translations of srcfile and targetfile, not influenced by 'factored'
         #they can be filenames, arrays of strings or io objects, too.
         'srctotarget': [], 'targettosrc': [],
+        #run aligner without srctotarget and targettosrc
+        'no_translation_override':False,
         
         #only consider target sentences for bleu-based alignment that are among top N alternatives for a given source sentence
         'maxalternatives':3,
@@ -124,7 +126,7 @@ class Aligner:
         #or passing filenames or io object for them in respectly.
         #if not passing anything or assigning None, they will use StringIO to save results.
         'output': None,
-		'output-src': None, 'output-target': None,
+        'output-src': None, 'output-target': None,
         'output-src-bad': None, 'output-target-bad': None,
         #the best alignment of corpus for evaluation
         'eval': None,
@@ -145,30 +147,34 @@ class Aligner:
       self.options = self.default_options.copy()
       self.options.update(options)
       
-      if self.options['srcfile']:
-        self.src, self.close_src = \
+      if not self.options['srcfile']:
+        raise ValueError('Source file not specified.')
+      if not self.options['targetfile']:
+        raise ValueError('Target file not specified.')
+      if not self.options['srctotarget'] and not self.options['targettosrc']\
+            and not self.options['no_translation_override']:
+        raise ValueError("ERROR: no translation available: BLEU scores can be computed between the source and target text, but this is not the intended usage of Bleualign and may result in poor performance! If you're *really* sure that this is what you want, set 'galechurch' for the options.")
+
+      self.src, self.close_src = \
             self._inputObjectFromParameter(self.options['srcfile'])
-      if self.options['targetfile']:
-        self.target, self.close_target = \
+      self.target, self.close_target = \
             self._inputObjectFromParameter(self.options['targetfile'])
 
-      if self.options['srctotarget']:
-        for f in self.options['srctotarget']:
+      for f in self.options['srctotarget']:
             obj, close_obj = \
                 self._inputObjectFromParameter(f)
             self.srctotarget.append(obj)
             self.close_srctotarget.append(close_obj)
-      if self.options['targettosrc']:
-        for f in self.options['targettosrc']:
+      for f in self.options['targettosrc']:
             obj, close_obj = \
                 self._inputObjectFromParameter(f)
             self.targettosrc.append(obj)
             self.close_targettosrc.append(close_obj)
 
       self.out1,self.close_out1=self._outputObjectFromParameter(
-			self.options['output-src'], self.options['output'], '-s')
+            self.options['output-src'], self.options['output'], '-s')
       self.out2,self.close_out2=self._outputObjectFromParameter(
- 			self.options['output-target'], self.options['output'], '-t')
+            self.options['output-target'], self.options['output'], '-t')
 
       if self.options['filter']:
         self.out_bad1,self.close_out_bad1=self._outputObjectFromParameter(
@@ -244,7 +250,7 @@ class Aligner:
                             for p in scorers:
                                 p.terminate()
                             producer.terminate()
-                            sys.exit(1)
+                            raise RuntimeError("Multiprocessing error")
                     continue
 
             (sourcelist,targetlist,translist1,translist2) = data
@@ -343,11 +349,14 @@ class Aligner:
         phase2.append(self.align(translist, raw_sourcelist))
 
       if not (translist1 or translist2):
-        if 'no_translation_override' in self.options or self.options['galechurch']:
+        if self.options['no_translation_override'] or self.options['galechurch']:
             phase1 = [self.align(raw_sourcelist, raw_targetlist)]
         else:
-            self.log("ERROR: no translation available: BLEU scores can be computed between the source and target text, but this is not the intended usage of Bleualign and may result in poor performance! If you're *really* sure that this is what you want, use the option '--srctotarget -'", 1)
-            sys.exit(1)
+            self.log("ERROR: no translation available", 1)
+            if multiprocessing_enabled:
+                sys.exit(1)
+            else:
+                raise RuntimeError("ERROR: no translation available")
 
       if len(phase1) > 1:
         self.log("intersecting all srctotarget alignments",1)
@@ -696,7 +705,7 @@ class Aligner:
           #try if concatenating target sentences together improves bleu score (beginning of gap)
           if pregapsrc:
             newscore,newtarget,newcorrect = scoredict[pregapsrc][0]
-            if newtarget != pregaptarget:
+            if newtarget != pregaptarget and newtarget != postgaptarget:
                 #print('\ntarget side: ' + str(newtarget) + ' better than ' + str(pregaptarget))
                 pregap = (pregapsrc,newtarget)
                 for i in newtarget:
@@ -707,7 +716,7 @@ class Aligner:
           #try if concatenating target sentences together improves bleu score (end of gap)
           if postgapsrc:
             newscore,newtarget,newcorrect = scoredict[postgapsrc][0]
-            if newtarget != postgaptarget:
+            if newtarget != postgaptarget and newtarget != pregaptarget:
                 #print('\ntarget side: ' + str(newtarget) + ' better than ' + str(postgaptarget))
                 postgap = (postgapsrc,newtarget)
                 for i in newtarget:
@@ -867,7 +876,7 @@ class Aligner:
             for sourceid in range(source_len):
                 if sourceid in bleualignsrc:
                     self.log('\033[92m' + str(sourceid) + ": "
-					    + str(self.bleualign[bleualignsrc.index(sourceid)][1]) + '\033[1;m')
+                        + str(self.bleualign[bleualignsrc.index(sourceid)][1]) + '\033[1;m')
                 else:
                     bestcand = self.scoredict.get(sourceid,[])
                     if bestcand:

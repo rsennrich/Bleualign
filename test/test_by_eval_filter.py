@@ -47,7 +47,7 @@ class TestByEvalFilter(unittest.TestCase, Utils):
 			for fr_file, de_file, filter_type in test_files:
 				srctotarget_file = fr_file
 				targettosrc_file = de_file
-				output_file = self.output_file_path(result_dir, srctotarget_file, targettosrc_file)
+				output_file = self.output_file_path(srctotarget_file, targettosrc_file)
 				output_path = os.path.join(result_dir , output_file)
 				options = getattr(self, option_function)(test_argument, filter_type,
 					srctotarget_file, targettosrc_file, output_path)
@@ -71,7 +71,9 @@ class TestByEvalFilter(unittest.TestCase, Utils):
 				os.remove(result_path)
 	def fileNameOptions(self, eval_type, filter_type,
 				srctotarget_file, targettosrc_file, output_file):
-		options = load_arguments(['', eval_type, '--filter', filter_type])
+		options = load_arguments(['', eval_type,\
+			'--filter', filter_type,\
+			'--srctotarget', '-'])
 		options['srctotarget'] = srctotarget_file
 		options['targettosrc'] = targettosrc_file
 		options['output-src'] = output_file + '-good-s'

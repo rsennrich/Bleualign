@@ -62,7 +62,7 @@ class TestByEval(unittest.TestCase, Utils):
 			for fr_file, de_file in test_files:
 				srctotarget_file = fr_file
 				targettosrc_file = de_file
-				output_file = self.output_file_path(result_dir, srctotarget_file, targettosrc_file)
+				output_file = self.output_file_path(srctotarget_file, targettosrc_file)
 				output_path = os.path.join(result_dir , output_file)
 				options = getattr(self, option_function)(test_argument,
 					srctotarget_file, targettosrc_file, output_path)
@@ -86,7 +86,7 @@ class TestByEval(unittest.TestCase, Utils):
 				getattr(self, remove_file)(result_path)
 	def fileNameOptions(self, eval_type,
 				srctotarget_file, targettosrc_file, output_file):
-		options = load_arguments(['', eval_type])
+		options = load_arguments(['', eval_type, '--srctotarget', '-'])
 		options['srctotarget'] = srctotarget_file
 		options['targettosrc'] = targettosrc_file
 		options['output-src'] = output_file + '-s'

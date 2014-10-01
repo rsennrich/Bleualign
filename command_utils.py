@@ -130,4 +130,8 @@ def load_arguments(sysargv):
     if options['targettosrc'] and not options['srctotarget']:
         print('\nWARNING: Only --targettosrc specified, but expecting at least one --srctotarget. Please swap source and target side.')
         sys.exit(2)
+    if not options['srctotarget'] and not options['targettosrc']\
+          and 'no_translation_override' not in options:
+        print("ERROR: no translation available: BLEU scores can be computed between the source and target text, but this is not the intended usage of Bleualign and may result in poor performance! If you're *really* sure that this is what you want, use the option '--srctotarget -'")
+        sys.exit(2)
     return options
