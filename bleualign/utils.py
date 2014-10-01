@@ -6,18 +6,11 @@
 
 # Evaluation functions for Bleualign
 
-from __future__ import division, print_function
-import sys
-import os
+from __future__ import division
 from operator import itemgetter
 
-loglevel = 1
 
-def evaluate(options, testalign, goldalign):
-    global loglevel
-    if 'loglevel' in options:
-        loglevel = options['loglevel']
-        
+def evaluate(options, testalign, goldalign, log_function):
     goldalign = [(tuple(src),tuple(target)) for src,target in goldalign]
     
     results = {}
@@ -28,16 +21,16 @@ def evaluate(options, testalign, goldalign):
         for pair in paircounts:
             pairs_normalized[pair] = (paircounts[pair],paircounts[pair] / float(len(goldalign)))
     
-    print('\ngold alignment frequencies\n')
+    log_function('\ngold alignment frequencies\n')
     for aligntype,(abscount,relcount) in sorted(pairs_normalized.items(),key=itemgetter(1),reverse=True):
-        print(aligntype,end='')
-        print(' - ',end='')
-        print(abscount,end='')
-        print(' ('+str(relcount)+')')
+        log_function(aligntype,end='')
+        log_function(' - ',end='')
+        log_function(abscount,end='')
+        log_function(' ('+str(relcount)+')')
     
-    print('\ntotal recall: ',end='')
-    print(str(len(goldalign)) + ' pairs in gold')
-    (tpstrict,fnstrict,tplax,fnlax) = recall((0,0),goldalign,[i[0] for i in testalign])
+    log_function('\ntotal recall: ',end='')
+    log_function(str(len(goldalign)) + ' pairs in gold')
+    (tpstrict,fnstrict,tplax,fnlax) = recall((0,0),goldalign,[i[0] for i in testalign],log_function)
     results['recall'] = (tpstrict,fnstrict,tplax,fnlax)
 
     for aligntype in set([i[1] for i in testalign]):
@@ -45,19 +38,18 @@ def evaluate(options, testalign, goldalign):
         for i in testalign:
             if i[1] == aligntype:
                 testalign_bytype.append(i)
-        print('precision for alignment type ' + str(aligntype) + ' ( ' + str(len(testalign_bytype)) + ' alignment pairs)')
-        precision(goldalign,testalign_bytype)
+        log_function('precision for alignment type ' + str(aligntype) + ' ( ' + str(len(testalign_bytype)) + ' alignment pairs)')
+        precision(goldalign,testalign_bytype,log_function)
 
-    print('\ntotal precision:',end='')
-    print(str(len(testalign)) + ' alignment pairs found')
-    (tpstrict,fpstrict,tplax,fplax) = precision(goldalign,testalign)
+    log_function('\ntotal precision:',end='')
+    log_function(str(len(testalign)) + ' alignment pairs found')
+    (tpstrict,fpstrict,tplax,fplax) = precision(goldalign,testalign,log_function)
     results['precision'] = (tpstrict,fpstrict,tplax,fplax)
 
     return results
 
 
-def precision(goldalign,testalign):
-    
+def precision(goldalign, testalign, log_function):
     tpstrict=0
     tplax=0
     fpstrict=0
@@ -79,28 +71,28 @@ def precision(goldalign,testalign):
             else:
                 fpstrict +=1
                 fplax +=1
-                log('false positive: ',2)
-                log((src,target),2)
+                log_function('false positive: ',2)
+                log_function((src,target),2)
     if tpstrict+fpstrict > 0:
-        print('precision strict: ',end='')
-        print((tpstrict/float(tpstrict+fpstrict)))
-        print('precision lax: ',end='')
-        print((tplax/float(tplax+fplax)))
-        print('')
+        log_function('precision strict: ',end='')
+        log_function((tpstrict/float(tpstrict+fpstrict)))
+        log_function('precision lax: ',end='')
+        log_function((tplax/float(tplax+fplax)))
+        log_function('')
     else:
-        print('nothing to find')
+        log_function('nothing to find')
 
     return tpstrict,fpstrict,tplax,fplax
 
 
-def recall(aligntype,goldalign,testalign):
+def recall(aligntype, goldalign, testalign, log_function):
 
     srclen,targetlen = aligntype
 
     if srclen == 0 and targetlen == 0:
         gapdists = [(0,0) for i in goldalign]
     elif srclen == 0 or targetlen == 0:
-        print('nothing to find')
+        log_function('nothing to find')
         return
     else:
         gapdists = [(len(srclist),len(targetlist)) for srclist,targetlist in goldalign]
@@ -128,44 +120,44 @@ def recall(aligntype,goldalign,testalign):
                 else:
                     fnstrict+=1
                     fnlax+=1
-                    log('not found: ',2),
-                    log(goldalign[i],2)
+                    log_function('not found: ',2),
+                    log_function(goldalign[i],2)
 
     if tpstrict+fnstrict>0:
-        print('recall strict: '),
-        print((tpstrict/float(tpstrict+fnstrict)))
-        print('recall lax: '),
-        print((tplax/float(tplax+fnlax)))
-        print('')
+        log_function('recall strict: '),
+        log_function((tpstrict/float(tpstrict+fnstrict)))
+        log_function('recall lax: '),
+        log_function((tplax/float(tplax+fnlax)))
+        log_function('')
     else:
-        print('nothing to find')
+        log_function('nothing to find')
 
     return tpstrict,fnstrict,tplax,fnlax
 
 
-def finalevaluation(results):
-    recall = [0,0,0,0]
-    precision = [0,0,0,0]
+def finalevaluation(results, log_function):
+    recall_value = [0,0,0,0]
+    precision_value = [0,0,0,0]
     for i,k in results.items():
-        for m,j in enumerate(recall):
-            recall[m] = j+ k['recall'][m]
-        for m,j in enumerate(precision):
-            precision[m] = j+ k['precision'][m]
+        for m,j in enumerate(recall_value):
+            recall_value[m] = j+ k['recall'][m]
+        for m,j in enumerate(precision_value):
+            precision_value[m] = j+ k['precision'][m]
 
     try:
-        pstrict = (precision[0]/float(precision[0]+precision[1]))
+        pstrict = (precision_value[0]/float(precision_value[0]+precision_value[1]))
     except ZeroDivisionError:
         pstrict = 0
     try:
-        plax =(precision[2]/float(precision[2]+precision[3]))
+        plax =(precision_value[2]/float(precision_value[2]+precision_value[3]))
     except ZeroDivisionError:
         plax = 0
     try:
-        rstrict= (recall[0]/float(recall[0]+recall[1]))
+        rstrict= (recall_value[0]/float(recall_value[0]+recall_value[1]))
     except ZeroDivisionError:
         rstrict = 0
     try:
-        rlax=(recall[2]/float(recall[2]+recall[3]))
+        rlax=(recall_value[2]/float(recall_value[2]+recall_value[3]))
     except ZeroDivisionError:
         rlax = 0
     if (pstrict+rstrict) == 0:
@@ -177,28 +169,22 @@ def finalevaluation(results):
     else:
         flax=2*(plax*rlax)/(plax+rlax)
 
-    print('\n=========================\n')
-    print('total results:')
-    print('recall strict: ',end='')
-    print(rstrict)
-    print('recall lax: ',end='')
-    print(rlax)
-    print('')
+    log_function('\n=========================\n')
+    log_function('total results:')
+    log_function('recall strict: ',end='')
+    log_function(rstrict)
+    log_function('recall lax: ',end='')
+    log_function(rlax)
+    log_function('')
 
-    print('precision strict: ',end='')
-    print(pstrict)
-    print('precision lax: '),
-    print(plax)
-    print('')
+    log_function('precision strict: ',end='')
+    log_function(pstrict)
+    log_function('precision lax: '),
+    log_function(plax)
+    log_function('')
     
-    print('f1 strict: ',end='')
-    print(fstrict)
-    print('f1 lax: ',end='')
-    print(flax)
-    print('')
-    
-
-
-def log(msg,level=1):
-  if level <= loglevel:
-    print(msg)
+    log_function('f1 strict: ',end='')
+    log_function(fstrict)
+    log_function('f1 lax: ',end='')
+    log_function(flax)
+    log_function('')
