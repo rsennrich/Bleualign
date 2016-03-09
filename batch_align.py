@@ -15,10 +15,10 @@
 
 import sys
 import os
-from align import Aligner
+from bleualign.align import Aligner
 
 if len(sys.argv) < 5:
-    sys.stderr.write('Usage: python batch_align directory source_suffix target_suffix translation_suffix')
+    sys.stderr.write('Usage: python batch_align directory source_suffix target_suffix translation_suffix\n')
     exit()
 
 directory = sys.argv[1]
