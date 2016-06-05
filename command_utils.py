@@ -114,6 +114,7 @@ def load_arguments(sysargv):
             global loglevel
             loglevel = int(a)
             options['loglevel'] = int(a)
+            options['verbosity'] = int(a)
         else:
             assert False, "unhandled option"
 
