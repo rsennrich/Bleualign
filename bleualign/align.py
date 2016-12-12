@@ -989,7 +989,7 @@ class Aligner:
 
     # store BLEU score for each sentence pair (used for filtering at the very end)
     def filter_sentence_pairs(self, sentscores, sources_output, targets_output):
-        before = 0
+        before = len(self.sources_out)
         for j,(src,target) in enumerate([i[0] for i in self.multialign]):
             if j in sentscores: # false if sentence pair has been filtered out by language filter
                 confidence = sentscores[j]
