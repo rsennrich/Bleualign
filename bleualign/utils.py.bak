@@ -6,7 +6,7 @@
 
 # Evaluation functions for Bleualign
 
-
+from __future__ import division
 from operator import itemgetter
 
 
@@ -22,7 +22,7 @@ def evaluate(options, testalign, goldalign, log_function):
             pairs_normalized[pair] = (paircounts[pair],paircounts[pair] / float(len(goldalign)))
     
     log_function('\ngold alignment frequencies\n')
-    for aligntype,(abscount,relcount) in sorted(list(pairs_normalized.items()),key=itemgetter(1),reverse=True):
+    for aligntype,(abscount,relcount) in sorted(pairs_normalized.items(),key=itemgetter(1),reverse=True):
         log_function(aligntype,end='')
         log_function(' - ',end='')
         log_function(abscount,end='')
@@ -138,7 +138,7 @@ def recall(aligntype, goldalign, testalign, log_function):
 def finalevaluation(results, log_function):
     recall_value = [0,0,0,0]
     precision_value = [0,0,0,0]
-    for i,k in list(results.items()):
+    for i,k in results.items():
         for m,j in enumerate(recall_value):
             recall_value[m] = j+ k['recall'][m]
         for m,j in enumerate(precision_value):

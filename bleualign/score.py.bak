@@ -16,7 +16,7 @@ score_set(s, testid, refids, n=4): Interface with dataset.py; calculate BLEU sco
 The reason for breaking the BLEU computation into three phases cook_refs(), cook_test(), and score_cooked() is to allow the caller to calculate BLEU scores for multiple test sets as efficiently as possible.
 '''
 
-
+from __future__ import division, print_function
 import sys, math, re, xml.sax.saxutils
 
 # Added to bypass NIST-style pre-processing of hyp and ref files -- wade
@@ -80,7 +80,7 @@ def cook_refs(refs, n=4):
     maxcounts = {}
     for ref in refs:
         counts = count_ngrams(ref, n)
-        for (ngram,count) in list(counts.items()):
+        for (ngram,count) in counts.items():
             maxcounts[ngram] = max(maxcounts.get(ngram,0), count)
     return ([len(ref) for ref in refs], maxcounts)
 
@@ -110,7 +110,7 @@ def cook_test(test, args, n=4):
 
     result['correct'] = [0]*n
     counts = count_ngrams(test, n)
-    for (ngram, count) in list(counts.items()):
+    for (ngram, count) in counts.items():
         result["correct"][len(ngram)-1] += min(refmaxcounts.get(ngram,0), count)
 
     return result

@@ -15,16 +15,24 @@ if __name__ == '__main__':
 		# passing filenames or io object for them in respectly.
 		# if not passing anything or assigning None, they will use StringIO to save results.
 		'output-src': None, 'output-target': None,
+		'output-src-bad': None, 'output-target-bad': None,
 		# other options ...
 		}
+	options['filter'] = 'sentences'
+	options['filterthreshold'] = 66
 	a = Aligner(options)
 	a.mainloop()
 	output_src, output_target = a.results()
-	# output_src, output_target is StringIO because options['output-src'] is None
+	output_src_bad, output_target_bad = a.results_bad()  # if you set options['filter']
+	# output_src is StringIO because options['output-src'] is None
 	src = output_src.getvalue()  # StringIO member function
 	trg = output_target.getvalue().splitlines()  # array of string
 	print('output_src.getvalue()')
-	print((src[:30]))
+	print(src[:30])
 	print()
 	print('output_target.getvalue().splitlines()')
-	print((trg[:3]))
+	print(trg[:3])
+	print()
+	print('filterthreshold for choice good part of alignment:',options['filterthreshold'],'%')
+	print('number of good/bad alignmemts:',
+		len(output_src.getvalue().splitlines()), len(output_src_bad.getvalue().splitlines()))

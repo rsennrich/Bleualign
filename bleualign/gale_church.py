@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
+
 import math
 
 # Based on Gale & Church 1993, 
@@ -179,10 +179,10 @@ def split_at(it, split_value):
         v = first
         while v != split_value:
             yield v
-            v = it.next()
+            v = next(it)
     
     while True:
-        yield _chunk_iterator(it.next())
+        yield _chunk_iterator(next(it))
         
 
 def parse_token_stream(stream, soft_delimiter, hard_delimiter):
@@ -202,4 +202,4 @@ if __name__ == "__main__":
     with nested(open(sys.argv[1], "r"), open(sys.argv[2], "r")) as (s, t):
         source = parse_token_stream((l.strip() for l in s), ".EOS", ".EOP")
         target = parse_token_stream((l.strip() for l in t), ".EOS", ".EOP")
-        print(align_texts(source, target))
+        print((align_texts(source, target)))

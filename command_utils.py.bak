@@ -4,7 +4,7 @@
 # Author: Rico Sennrich <sennrich@cl.uzh.ch>
 # For licensing information, see LICENSE
 
-
+from __future__ import division, print_function
 import sys
 import os
 import getopt
@@ -71,7 +71,7 @@ def load_arguments(sysargv):
             options['targetfile'] = os.path.join(project_path,'eval','eval1989.fr')
             from eval import goldeval
             goldalign = [None] * len(goldeval.gold1990map)
-            for index, data in list(goldeval.gold1990map.items()):
+            for index, data in goldeval.gold1990map.items():
                 goldalign[index] = goldeval.gold[data]
             options['eval'] = goldalign
         elif o in ("-d", "--deveval"):

@@ -4,7 +4,7 @@
 # Author: Rico Sennrich <sennrich@cl.uzh.ch>
 # For licensing information, see LICENSE
 
-
+from __future__ import division, print_function
 import sys
 import time
 import math
@@ -657,7 +657,7 @@ class Aligner:
         scoredict_raw = self.eval_sents(evalsrc_raw,evaltarget_raw)
         
         scoredict = {}
-        for src,value in list(scoredict_raw.items()):
+        for src,value in scoredict_raw.items():
             src = evalsrc[src][0]
             if value:
                 newlist = []
