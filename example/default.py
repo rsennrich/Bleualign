@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 from bleualign.align import Aligner
 
@@ -24,7 +25,7 @@ if __name__ == '__main__':
 	src = output_src.getvalue()  # StringIO member function
 	trg = output_target.getvalue().splitlines()  # array of string
 	print('output_src.getvalue()')
-	print((src[:30]))
+	print(src[:30])
 	print()
 	print('output_target.getvalue().splitlines()')
-	print((trg[:3]))
+	print(trg[:3])

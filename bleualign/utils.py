@@ -7,6 +7,7 @@
 # Evaluation functions for Bleualign
 
 
+from __future__ import division
 from operator import itemgetter
 
 
