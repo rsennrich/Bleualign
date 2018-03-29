@@ -36,6 +36,8 @@ def usage():
     print('\t\t' + bold +'articles' + reset + '\tevaluate each article and filter on a per-article basis')
     print('\n\t' + bold +'--filterthreshold' + reset + ' int')
     print('\t\tFilters output to best XX percent. (Default: 90). Only works if --filter is set.')
+    print('\n\t' + bold +'--bleuthreshold' + reset + ' float')
+    print('\t\tFilters out sentence pairs with sentence-level BLEU score < XX (in range from 0 to 1). (Default: 0). Only works if --filter is set.')
     print('\n\t' + bold +'--filterlang' + reset)
     print('\t\tFilters out sentences/articles for which BLEU score between source and target is higher than that between translation and target (usually means source and target are in same language). Only works if --filter is set.')
     print('\t' + bold +'--galechurch' + reset)
@@ -47,7 +49,7 @@ def usage():
 
 def load_arguments(sysargv):
     try:
-        opts, args = getopt.getopt(sysargv[1:], "def:ho:s:t:v:", ["factored", "filter=", "filterthreshold=", "filterlang", "printempty", "deveval","eval", "help", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "verbosity="])
+        opts, args = getopt.getopt(sysargv[1:], "def:ho:s:t:v:", ["factored", "filter=", "filterthreshold=", "bleuthreshold=", "filterlang", "printempty", "deveval","eval", "help", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "verbosity="])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(str(err)) # will print something like "option -a not recognized"
@@ -94,6 +96,8 @@ def load_arguments(sysargv):
               sys.exit(2)
         elif o == "--filterthreshold":
             options['filterthreshold'] = float(a)
+        elif o == "--bleuthreshold":
+            options['bleuthreshold'] = float(a)
         elif o == "--filterlang":
             options['filterlang'] = True
         elif o == "--galechurch":

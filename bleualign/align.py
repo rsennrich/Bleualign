@@ -113,12 +113,13 @@ class Aligner:
         #must be reliable (article i in the source text needs to correspond to article i in the target text)
         'end_of_article_marker' : ".EOA",
 
-        #filtering good and bad alignemts by bleuscore
+        #filtering out bad alignments by bleuscore
         #filter has sentences or articles type
-        #filterthreshold means choices the higher percentage of alignment
+        #filterthreshold means choosing the best X% of alignments (according to BLEU)
+        #bleuthreshold requires a sentence pair to achieve a certain BLEU score to be included in the output
         #set filterlang True, whose when you want to filter alignemts which src is similar to target than translation
-        'filter': None, 'filterthreshold': 90, 'filterlang': None,
-        
+        'filter': None, 'filterthreshold': 90, 'bleuthreshold': 0, 'filterlang': None,
+
         #it will print unalignemt pair(zero to one or one to zero pair)
         'printempty': False,
         
@@ -1050,7 +1051,7 @@ class Aligner:
         totallength += length
         if totallength > goodlength:
           bad_percentiles = self.finalbleu[i+1:]
-          self.log("\nHow about throwing away the following " + self.options['filter'] + "?\n",2)
+          self.log("\nDiscarding the following " + self.options['filter'] + " based on relative BLEU\n",2)
           self.log(bad_percentiles,2)
           if self.options['verbosity'] >= 3:
             for score,score2,start,end in bad_percentiles:
@@ -1061,9 +1062,27 @@ class Aligner:
                 self.log('-----------------',3)
           break
 
-      stopwrite = dict([(i[2],1) for i in bad_percentiles])
-      resumewrite = dict([(i[3],1) for i in bad_percentiles])
+      stopwrite = set([i[2] for i in bad_percentiles])
+      resumewrite = set([i[3] for i in bad_percentiles])
       stopped = 0
+
+      #absolute BLEU threshold
+      if self.options['bleuthreshold']:
+        bad_sentences = []
+        for i,(articlescore,articlescore2,before,after) in enumerate(self.finalbleu):
+            if articlescore < self.options['bleuthreshold']:
+                bad_sentences.append((articlescore,articlescore2,before,after))
+                stopwrite.add(before)
+                resumewrite.add(after)
+        self.log("\nDiscarding the following " + self.options['filter'] + " based on absolute BLEU\n",2)
+        self.log(bad_sentences,2)
+        if self.options['verbosity'] >= 3:
+          for score,score2,start,end in bad_sentences:
+            for i in range(start,end):
+              self.log(score,3)
+              self.log(self.sources_out[i],3)
+              self.log(self.targets_out[i],3)
+              self.log('-----------------',3)
 
       if self.out1 and self.out2 and self.out_bad1 and self.out_bad2:
         for i,line in enumerate(self.sources_out):
