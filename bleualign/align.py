@@ -1039,8 +1039,9 @@ class Aligner:
         totallength += length
         totalscore += articlescore*length
         
-      averagescore = totalscore/totallength
-      self.log("The average BLEU score is: " + str(averagescore),1)
+      if totallength != 0:
+            averagescore = totalscore/totallength
+            self.log("The average BLEU score is: " + str(averagescore),1)
       
       goodlength = totallength*self.options['filterthreshold']/float(100)
       totallength = 0
