@@ -90,7 +90,7 @@ def cook_ref_set(ref, n=4):
     needs to know about them.  Also provides a set cause bleualign wants it'''
     ref = normalize(ref)
     counts = count_ngrams(ref, n)
-    return (len(ref), counts, set(counts))
+    return (len(ref), counts, frozenset(counts))
 
 
 
