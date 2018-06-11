@@ -439,9 +439,8 @@ class Aligner:
       scoredict = {}
       cooked_test = {}
       cooked_test2 = {}
-      cooktarget =  [(items[0],bleu.cook_refs([items[1]],self.options['bleu_ngrams'])) for items in enumerate(targetlist)]
-      cooktarget = [(refID,(reflens, refmaxcounts, set(refmaxcounts))) for (refID,(reflens, refmaxcounts)) in cooktarget]
-
+      ngrams = self.options['bleu_ngrams']
+      cooktarget =  [(items[0],bleu.cook_ref_set(items[1],ngrams)) for items in enumerate(targetlist)]
 
       for testID,testSent in enumerate(translist):
         scorelist = []
@@ -459,12 +458,12 @@ class Aligner:
             ngrams_sorted[len(ngram)-1].add(ngram)
             
 
-        for (refID,(reflens, refmaxcounts, refset)) in cooktarget:
+        for (refID,(reflen, refmaxcounts, refset)) in cooktarget:
             
           ngrams_filtered = ngrams_sorted[self.options['bleu_ngrams']-1].intersection(refset)
         
           if ngrams_filtered:
-            cooked_test["reflen"] = reflens[0]
+            cooked_test["reflen"] = reflen
             cooked_test['correct'] = [0]*self.options['bleu_ngrams']
             for ngram in ngrams_filtered:
               cooked_test["correct"][self.options['bleu_ngrams']-1] += min(refmaxcounts[ngram], counts[ngram])

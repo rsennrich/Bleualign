@@ -84,6 +84,17 @@ def cook_refs(refs, n=4):
             maxcounts[ngram] = max(maxcounts.get(ngram,0), count)
     return ([len(ref) for ref in refs], maxcounts)
 
+def cook_ref_set(ref, n=4):
+    '''Takes a reference sentences for a single segment
+    and returns an object that encapsulates everything that BLEU
+    needs to know about them.  Also provides a set cause bleualign wants it'''
+    ref = normalize(ref)
+    counts = count_ngrams(ref, n)
+    return (len(ref), counts, set(counts))
+
+
+
+
 def cook_test(test, args, n=4):
     '''Takes a test sentence and returns an object that
     encapsulates everything that BLEU needs to know about it.'''
