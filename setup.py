@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 import os
-from distutils.core import setup
+import setuptools
 
 def read_file(filename):
 	return open(os.path.join(os.path.dirname(__file__), filename)).read()
 
-setup(
+setuptools.setup(
 	name = 'bleualign',
 	version = '0.1.1',
 	description = 'An MT-based sentence alignment tool',
