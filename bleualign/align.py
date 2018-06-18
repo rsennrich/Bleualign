@@ -439,13 +439,19 @@ class Aligner:
       scoredict = {}
       cooked_test = {}
       cooked_test2 = {}
-      cooktarget =  [(items[0],bleu.cook_refs([items[1]],self.options['bleu_ngrams'])) for items in enumerate(targetlist)]
-      cooktarget = [(refID,(reflens, refmaxcounts, set(refmaxcounts))) for (refID,(reflens, refmaxcounts)) in cooktarget]
+      ngrams = self.options['bleu_ngrams']
 
+      cooktarget_cache = {}
+      cooktarget = []
+      for idx, item in enumerate(targetlist):
+        if item in cooktarget_cache:
+          cooktarget.append((idx, cooktarget_cache[item]))
+        else:
+          cooked = (idx, bleu.cook_ref_set(item, ngrams))
+          cooktarget.append(cooked)
+          cooktarget_cache[item] = cooked[1]
 
       for testID,testSent in enumerate(translist):
-        scorelist = []
-
 
         #copied over from bleu.py to minimize redundancy
         test_normalized = bleu.normalize(testSent)
@@ -459,12 +465,19 @@ class Aligner:
             ngrams_sorted[len(ngram)-1].add(ngram)
             
 
-        for (refID,(reflens, refmaxcounts, refset)) in cooktarget:
-            
+        scorelist = []
+        scorelist_cache = {}
+        for (refID,(reflen, refmaxcounts, refset)) in cooktarget:
+          if refset in scorelist_cache:
+            if scorelist_cache[refset] is not None:
+              m, c = scorelist_cache[refset]
+              scorelist.append((m, refID, c))
+            continue
+
           ngrams_filtered = ngrams_sorted[self.options['bleu_ngrams']-1].intersection(refset)
         
           if ngrams_filtered:
-            cooked_test["reflen"] = reflens[0]
+            cooked_test["reflen"] = reflen
             cooked_test['correct'] = [0]*self.options['bleu_ngrams']
             for ngram in ngrams_filtered:
               cooked_test["correct"][self.options['bleu_ngrams']-1] += min(refmaxcounts[ngram], counts[ngram])
@@ -493,6 +506,11 @@ class Aligner:
                 
                 meanscore = (2*score*score2)/(score+score2)
                 scorelist.append((meanscore,refID,cooked_test['correct']))
+                scorelist_cache[refset] = (meanscore, cooked_test['correct'])
+            else:
+                scorelist_cache[refset] = None
+        else:
+            scorelist_cache[refset] = None
               
         scoredict[testID] = sorted(scorelist,key=itemgetter(0),reverse=True)[:self.options['maxalternatives']]
         
