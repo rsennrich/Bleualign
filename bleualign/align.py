@@ -970,11 +970,11 @@ class Aligner:
 
       if self.out1 and self.out2 and not self.options['filter']:
         if self.options['factored']:
-            self.out1.writelines([line + '\n' for line in sources_factored])
-            self.out2.writelines([line + '\n' for line in targets_factored])
+            self.out1.write('\n'.join(sources_factored) + '\n')
+            self.out2.write('\n'.join(targets_factored) + '\n')
         else:
-            self.out1.writelines([line + '\n' for line in sources])
-            self.out2.writelines([line + '\n' for line in targets])
+            self.out1.write('\n'.join(sources) + '\n')
+            self.out2.write('\n'.join(targets) + '\n')
 
 
     #get BLEU score of sentence pair (for filtering)
