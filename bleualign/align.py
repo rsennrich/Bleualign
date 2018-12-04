@@ -906,7 +906,7 @@ class Aligner:
         if source_len and target_len:
             self.log("\n" + str(len(self.bleualign)) + ' out of ' + str(source_len) + ' source sentences aligned by BLEU ' + str(100*len(self.bleualign)/float(source_len)) + '%',2)
             self.log("after gap filling, " + str(multialignsrccount) + ' out of '+ str(source_len) + ' source sentences aligned ' + str(100*multialignsrccount/float(source_len)) + '%',2)
-            self.log("after gap filling, " + str(multialigntargetcount) + ' out of '+ str(target_len) + ' target sentences aligned ' + str(100*multialigntargetcount/float(source_len)) + '%',2)
+            self.log("after gap filling, " + str(multialigntargetcount) + ' out of '+ str(target_len) + ' target sentences aligned ' + str(100*multialigntargetcount/float(target_len)) + '%',2)
 
 
     #print out some debugging info, and print output to file
