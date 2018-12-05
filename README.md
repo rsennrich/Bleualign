@@ -70,6 +70,21 @@ The Bleualign package can also be installed directly from Github with:
 
     pip install git+https://github.com/rsennrich/Bleualign.git
 
+EVALUATION
+---------
+
+Two hand-aligned documents are provided with the repository for development and testing.
+Evaluation is performed if you add the argument `-d` for the development set, and `-e` for the test set.
+
+An example command for aligning the development set (one long document with 468/554 sentences in DE/FR):
+
+  ./bleualign.py --source eval/eval1957.de --target eval/eval1957.fr --srctotarget eval/eval1957.europarlfull.fr -d
+
+An example command for aligning the test set (7 documents, totalling 993/1011 sentences in DE/FR):
+
+./bleualign.py --source eval/eval1989.de --target eval/eval1989.fr --srctotarget eval/eval1989.europarlfull.fr -e
+
+
 PUBLICATIONS
 ------------
 
