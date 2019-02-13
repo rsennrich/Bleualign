@@ -19,8 +19,8 @@ class TestGaleChurch(unittest.TestCase, Utils):
 			options = load_arguments(['', test_argument, '--srctotarget', '-'])
 			output_file = test_set + '-galechurch'
 			output_path = os.path.join(result_dir , output_file)
-			options['output-src'] = output_file + '-s'
-			options['output-target'] = output_file + '-t'
+			options['output-src'] = output_path + '-s'
+			options['output-target'] = output_path + '-t'
 			a = Aligner(options)
 			a.mainloop()
 			output_src, output_target = a.results()
