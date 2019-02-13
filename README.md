@@ -56,6 +56,8 @@ example: given the directory `raw_files` with the files `0.de`, `0.fr` and `0.tr
 
 This will produce the files `0.de.aligned` and `0.fr.aligned`
 
+Input files are expected to use UTF-8 encoding.
+
 USAGE AS PYTHON MODULE
 ----------------------
 

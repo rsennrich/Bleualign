@@ -190,7 +190,7 @@ class Aligner:
     # parameter may be filename, IO object or string array
     def _inputObjectFromParameter(self, parameter):
         try:
-            inputObject = io.open(parameter, 'r')
+            inputObject = io.open(parameter, 'r', encoding='UTF-8')
             close_object = True
         except:
             if isinstance(parameter, io.TextIOBase):
@@ -205,12 +205,12 @@ class Aligner:
         close_object = False
         if parameter:
             try:
-                outputObject = io.open(parameter, 'w')
+                outputObject = io.open(parameter, 'w', encoding='UTF-8')
                 close_object = True
             except:
                 outputObject = parameter
         elif filename:
-            outputObject = io.open(filename + suffix, 'w')
+            outputObject = io.open(filename + suffix, 'w', encoding='UTF-8')
         else:
             outputObject = io.StringIO()
         return outputObject, close_object
