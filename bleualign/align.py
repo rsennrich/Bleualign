@@ -13,9 +13,10 @@ from bleualign.gale_church import align_texts
 import bleualign.score as bleu
 from bleualign.utils import evaluate, finalevaluation
 import io
+import platform
 
 
-if sys.version_info >= (2,6):
+if sys.version_info >= (2,6) and platform.system() != "Windows":
   import multiprocessing
   multiprocessing_enabled = 1
   number_of_threads = 4
