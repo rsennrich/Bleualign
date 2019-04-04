@@ -603,9 +603,9 @@ class Aligner:
           lastpair = ((src,),(target,))
 
       #if self.bleualign is empty, gap will start at 0
-      if not src:
+      if src is None:
           src = -1
-      if not target:
+      if target is None:
           target = -1
 
       #search for gap after last alignment pair
