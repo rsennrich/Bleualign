@@ -4,7 +4,7 @@
 # Author: Rico Sennrich <sennrich@cl.uzh.ch>
 # For licensing information, see LICENSE
 
-from __future__ import division,print_function
+from __future__ import division,print_function,unicode_literals
 import sys
 import time
 import math
