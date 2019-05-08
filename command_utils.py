@@ -103,9 +103,11 @@ def load_arguments(sysargv):
         elif o == "--galechurch":
             options['galechurch'] = True
         elif o in ("-s", "--source"):
-            options['srcfile'] = a
+            if not 'eval' in options:
+                options['srcfile'] = a
         elif o in ("-t", "--target"):
-            options['targetfile'] = a
+            if not 'eval' in options:
+                options['targetfile'] = a
         elif o == "--srctotarget":
             if a == '-':
                 options['no_translation_override'] = True
