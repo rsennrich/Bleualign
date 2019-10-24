@@ -46,10 +46,12 @@ def usage():
     print('\t\tAlso write unaligned sentences to file. By default, they are discarded.')
     print('\t' + bold +'--verbosity' + reset + ', ' + bold +'-v' + reset + ' int')
     print('\t\tVerbosity. Choose amount of debugging output. Default value 1; choose 0 for (mostly) quiet mode, 2 for verbose output')
+    print('\t' + bold +'--processes' + reset + ', ' + bold +'-p' + reset + ' int')
+    print('\t\tNumber of parallel processes. Documents are split across available processes. Default: 4.')
 
 def load_arguments(sysargv):
     try:
-        opts, args = getopt.getopt(sysargv[1:], "def:ho:s:t:v:", ["factored", "filter=", "filterthreshold=", "bleuthreshold=", "filterlang", "printempty", "deveval","eval", "help", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "verbosity="])
+        opts, args = getopt.getopt(sysargv[1:], "def:ho:s:t:v:p:", ["factored", "filter=", "filterthreshold=", "bleuthreshold=", "filterlang", "printempty", "deveval","eval", "help", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "verbosity=", "printempty="])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(str(err)) # will print something like "option -a not recognized"
@@ -61,6 +63,7 @@ def load_arguments(sysargv):
     options['output'] = None
     options['srctotarget'] = []
     options['targettosrc'] = []
+    options['processes'] = 4
     bold = "\033[1m"
     reset = "\033[0;0m"
 
@@ -122,6 +125,8 @@ def load_arguments(sysargv):
             loglevel = int(a)
             options['loglevel'] = int(a)
             options['verbosity'] = int(a)
+        elif o in ("-p", "--processes"):
+            options['num_processes'] = int(a)
         else:
             assert False, "unhandled option"
 

@@ -19,7 +19,6 @@ import platform
 if sys.version_info >= (2,6) and platform.system() != "Windows":
   import multiprocessing
   multiprocessing_enabled = 1
-  number_of_threads = 4
 else:
   multiprocessing_enabled = 0
 
@@ -64,13 +63,13 @@ def collect_article(src,srctotarget,target,targettosrc,options):
 
 #takes a queue as argument and puts all articles to be aligned in it.
 #best call this in a separate process because we limit the queue size for memory reasons
-def tasks_producer(tasks,num_tasks,data):
+def tasks_producer(tasks,num_tasks,data,num_processes):
     for i,task in enumerate(collect_article(*data)):
         num_tasks.value += 1
         tasks.put((i,task),True)
         
     #poison pills
-    for i in range(number_of_threads):
+    for i in range(num_processes):
         tasks.put((None,None))
     num_tasks.value -= 1 # only if this point is reached, process finishes when all tasks are done.
 
@@ -134,6 +133,8 @@ class Aligner:
         'eval': None,
         #defines amount of debugging output.
         'verbosity': 1, 'log_to':sys.stdout,
+        #number of parallel processes
+        'num_processes': 1
         }
     def __init__(self,options):
       self.src, self.target = None,None
@@ -221,19 +222,19 @@ class Aligner:
       
       results = {}
 
-      if multiprocessing_enabled:
-        tasks = multiprocessing.Queue(number_of_threads+1)
+      if multiprocessing_enabled and self.options['num_processes'] > 1:
+        tasks = multiprocessing.Queue(self.options['num_processes']+1)
 
         manager = multiprocessing.Manager()
         scores = manager.dict()
         num_tasks = manager.Value('i',1)
-        scorers = [AlignMultiprocessed(tasks,self.options,scores,self.log)  for i in range(number_of_threads)]
+        scorers = [AlignMultiprocessed(tasks,self.options,scores,self.log)  for i in range(self.options['num_processes'])]
 
         for p in scorers:
           p.start()
 
         #this function produces the alignment tasks for the consumers in scorers
-        producer = multiprocessing.Process(target=tasks_producer,args=(tasks,num_tasks,(self.src,self.srctotarget,self.target,self.targettosrc,self.options)))
+        producer = multiprocessing.Process(target=tasks_producer,args=(tasks,num_tasks,(self.src,self.srctotarget,self.target,self.targettosrc,self.options),self.options['num_processes']))
         producer.start()
 
         i = 0
@@ -355,7 +356,7 @@ class Aligner:
             phase1 = [self.align(raw_sourcelist, raw_targetlist)]
         else:
             self.log("ERROR: no translation available", 1)
-            if multiprocessing_enabled:
+            if multiprocessing_enabled and self.options['num_processes'] > 1:
                 sys.exit(1)
             else:
                 raise RuntimeError("ERROR: no translation available")
