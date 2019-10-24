@@ -217,10 +217,12 @@ class Aligner:
         return outputObject, close_object
 
     #takes care of multiprocessing; calls process() function for each article
-    def mainloop(self):
-      
+    def mainloop(self, vs_debug_mode=False):
       results = {}
-
+      if vs_debug_mode == True: #vscode will raise errors unless multiprocessing is disabled.  
+        multiprocessing_enabled = False
+      else:
+        multiprocessing_enabled = True
       if multiprocessing_enabled:
         tasks = multiprocessing.Queue(number_of_threads+1)
 
