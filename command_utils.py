@@ -55,7 +55,7 @@ def usage():
 
 def load_arguments(sysargv):
     try:
-        opts, args = getopt.getopt(sysargv[1:], "def:ho:s:t:v:p:", ["factored", "filter=", "filterthreshold=", "bleuthreshold=", "filterlang", "printempty", "deveval","eval", "help", "bleu_n=", "bleu_charlevel", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "verbosity=", "printempty="])
+        opts, args = getopt.getopt(sysargv[1:], "def:ho:s:t:v:p:", ["factored", "filter=", "filterthreshold=", "bleuthreshold=", "filterlang", "printempty", "deveval","eval", "help", "bleu_n=", "bleu_charlevel", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "verbosity=", "printempty=", "processes="])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(str(err)) # will print something like "option -a not recognized"
