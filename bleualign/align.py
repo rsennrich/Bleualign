@@ -95,6 +95,10 @@ class Aligner:
         #bleu scoring algorithm works with 4-grams by default. We got better results when using 2-grams (since there are less 0 scores then)
         'bleu_ngrams' : 2,
 
+        #BLEU is word-based by default, but character-level BLEU is more suitable for some languages, e.g. continuous script languages without space.
+        #it is a good idea to also increase bleu_ngrams when switching to character-level BLEU
+        'bleu_charlevel' : False,
+
         #consider N to 1 (and 1 to N) alignment in gapfilling (complexity is size_of_gap*value^2, so don't turn this unnecessarily high)
         #also, there are potential precision issues.
         #set to 1 to disable bleu-based 1 to N alignments and let gale & church fill the gaps
@@ -442,10 +446,13 @@ class Aligner:
       cooked_test = {}
       cooked_test2 = {}
       ngrams = self.options['bleu_ngrams']
+      charlevel = self.options['bleu_charlevel']
 
       cooktarget_cache = {}
       cooktarget = []
       for idx, item in enumerate(targetlist):
+        if charlevel:
+            item = tuple(item)
         if item in cooktarget_cache:
           cooktarget.append((idx, cooktarget_cache[item]))
         else:
@@ -454,6 +461,9 @@ class Aligner:
           cooktarget_cache[item] = cooked[1]
 
       for testID,testSent in enumerate(translist):
+
+        if charlevel:
+            testSent = tuple(testSent)
 
         #copied over from bleu.py to minimize redundancy
         test_normalized = bleu.normalize(testSent)

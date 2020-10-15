@@ -36,11 +36,15 @@ def usage():
     print('\t\t' + bold +'articles' + reset + '\tevaluate each article and filter on a per-article basis')
     print('\n\t' + bold +'--filterthreshold' + reset + ' int')
     print('\t\tFilters output to best XX percent. (Default: 90). Only works if --filter is set.')
-    print('\n\t' + bold +'--bleuthreshold' + reset + ' float')
+    print('\t' + bold +'--bleuthreshold' + reset + ' float')
     print('\t\tFilters out sentence pairs with sentence-level BLEU score < XX (in range from 0 to 1). (Default: 0). Only works if --filter is set.')
-    print('\n\t' + bold +'--filterlang' + reset)
+    print('\t' + bold +'--filterlang' + reset)
     print('\t\tFilters out sentences/articles for which BLEU score between source and target is higher than that between translation and target (usually means source and target are in same language). Only works if --filter is set.')
-    print('\t' + bold +'--galechurch' + reset)
+    print('\n\t' + bold +'--bleu_n' + reset + ' int')
+    print('\t\tConsider n-grams up to size n for BLEU. Default 2.')
+    print('\t' + bold +'--bleu_charlevel' + reset)
+    print('\t\tPerform BLEU on charcter-level (recommended for continuous script language; also consider increasing bleu_n).')
+    print('\n\t' + bold +'--galechurch' + reset)
     print('\t\tAlign the bitext using Gale and Church\'s algorithm (without BLEU comparison).')
     print('\t' + bold +'--printempty' + reset)
     print('\t\tAlso write unaligned sentences to file. By default, they are discarded.')
@@ -51,7 +55,7 @@ def usage():
 
 def load_arguments(sysargv):
     try:
-        opts, args = getopt.getopt(sysargv[1:], "def:ho:s:t:v:p:", ["factored", "filter=", "filterthreshold=", "bleuthreshold=", "filterlang", "printempty", "deveval","eval", "help", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "verbosity=", "printempty="])
+        opts, args = getopt.getopt(sysargv[1:], "def:ho:s:t:v:p:", ["factored", "filter=", "filterthreshold=", "bleuthreshold=", "filterlang", "printempty", "deveval","eval", "help", "bleu_n=", "bleu_charlevel", "galechurch", "output=", "source=", "target=", "srctotarget=", "targettosrc=", "verbosity=", "printempty="])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(str(err)) # will print something like "option -a not recognized"
@@ -105,6 +109,10 @@ def load_arguments(sysargv):
             options['filterlang'] = True
         elif o == "--galechurch":
             options['galechurch'] = True
+        elif o == "--bleu_n":
+            options['bleu_ngrams'] = int(a)
+        elif o == "--bleu_charlevel":
+            options['bleu_charlevel'] = True
         elif o in ("-s", "--source"):
             if not 'eval' in options:
                 options['srcfile'] = a
