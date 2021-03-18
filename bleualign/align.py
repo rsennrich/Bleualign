@@ -943,6 +943,8 @@ class Aligner:
       lastsrc,lasttarget = 0,0
       for j,(src,target) in enumerate([i[0] for i in self.multialign]):
 
+        self.log("alignment: {0} - {1}".format(",".join(map(str,src)), ",".join(map(str,target))),2)
+
         if self.options['printempty']:
             if src[0] != lastsrc + 1:
                 sources.extend([sourcelist[ID] for ID in range(lastsrc+1,src[0])])
